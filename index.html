@@ -4,32 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JJ Procurement Tracker</title>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background: #FDF5F8; min-height: 100vh; }
 input, select, textarea { font-family: inherit; }
-.wrap { min-width: 1080px; }
 ::-webkit-scrollbar { height: 4px; width: 4px; }
 ::-webkit-scrollbar-thumb { background: #F4C0D1; border-radius: 99px; }
+.wrap { overflow-x: auto; }
 </style>
 </head>
 <body>
 <div id="root"></div>
-<script type="text/babel">
-
+<script>
+const e = React.createElement;
 const { useState, useMemo, useEffect, useCallback } = React;
 
-const PINK = "#E8165B";
-const PINK_L = "#FBEAF0";
-const PINK_M = "#F4C0D1";
-const PINK_D = "#72243E";
-
-const SK = "jj_s9";
-const RK = "jj_r9";
-const NK = "jj_n9";
+const PINK = "#E8165B", PL = "#FBEAF0", PM = "#F4C0D1", PD = "#72243E";
+const SK = "jj_s9", RK = "jj_r9", NK = "jj_n9";
 
 const STORES = [
   {name:"114 Tenth Ave",id:"10638",region:"East",cm:"Devin Corcoran",cs:"2026-01-27",ho:"2026-05-11",op:"2026-05-18",type:"new"},
@@ -85,30 +78,30 @@ const STORES = [
 ];
 
 const VM = {
-  East: { signage:"Identiti", millwork:"SCI / Fabricate", artwork:"Framebridge / SCI" },
-  West: { signage:"Mowax", millwork:"DisplayIt", artwork:"Framebridge / SCI" }
+  East:{signage:"Identiti",millwork:"SCI / Fabricate",artwork:"Framebridge / SCI"},
+  West:{signage:"Mowax",millwork:"DisplayIt",artwork:"Framebridge / SCI"}
 };
 
 const CATS = [
-  {key:"furniture", label:"Furniture", emoji:"🛋", vendor:()=>"Empire"},
-  {key:"millwork", label:"Millwork", emoji:"🔨", vendor:(r)=>VM[r].millwork},
-  {key:"tile", label:"Tile", emoji:"⬜", vendor:()=>"Tilebar / Daltile"},
-  {key:"lighting", label:"Lighting", emoji:"💡", vendor:()=>"Illuminico"},
-  {key:"plants", label:"Plants / Decor", emoji:"🌿", vendor:()=>"Empire"},
-  {key:"signage", label:"Signage", emoji:"🪧", vendor:(r)=>VM[r].signage},
-  {key:"bar", label:"Bar / Kitchen", emoji:"🍋", vendor:()=>"DON"},
-  {key:"artwork", label:"Artwork", emoji:"🖼", vendor:(r)=>VM[r].artwork},
-  {key:"pickup", label:"App Pick Up Sign", emoji:"📱", vendor:()=>"Yellowpop"},
-  {key:"smallwares", label:"Smallwares", emoji:"🥤", vendor:()=>"DON"},
-  {key:"coffee", label:"Coffee Install", emoji:"☕", vendor:()=>"Black Rabbit Services"},
-  {key:"filtration", label:"Filtration", emoji:"💧", vendor:()=>"Jason Enterprises"},
+  {key:"furniture",label:"Furniture",emoji:"🛋",vendor:function(){return "Empire";}},
+  {key:"millwork",label:"Millwork",emoji:"🔨",vendor:function(r){return VM[r].millwork;}},
+  {key:"tile",label:"Tile",emoji:"⬜",vendor:function(){return "Tilebar / Daltile";}},
+  {key:"lighting",label:"Lighting",emoji:"💡",vendor:function(){return "Illuminico";}},
+  {key:"plants",label:"Plants / Decor",emoji:"🌿",vendor:function(){return "Empire";}},
+  {key:"signage",label:"Signage",emoji:"🪧",vendor:function(r){return VM[r].signage;}},
+  {key:"bar",label:"Bar / Kitchen",emoji:"🍋",vendor:function(){return "DON";}},
+  {key:"artwork",label:"Artwork",emoji:"🖼",vendor:function(r){return VM[r].artwork;}},
+  {key:"pickup",label:"App Pick Up Sign",emoji:"📱",vendor:function(){return "Yellowpop";}},
+  {key:"smallwares",label:"Smallwares",emoji:"🥤",vendor:function(){return "DON";}},
+  {key:"coffee",label:"Coffee Install",emoji:"☕",vendor:function(){return "Black Rabbit Services";}},
+  {key:"filtration",label:"Filtration",emoji:"💧",vendor:function(){return "Jason Enterprises";}},
 ];
 
 const STATUSES = ["Not Started","Open","In Progress","En Route","Delivered","Delivered & Installed","Installed","Complete","Delayed","Overdue"];
 const DONE_S = ["Complete","Delivered & Installed","Installed","Delivered"];
 const RISK_S = ["Delayed","Overdue"];
 
-const STATUS_CFG = {
+const SCFG = {
   "Not Started":{bg:"#F5F4F1",text:"#888780",dot:"#C8C6BE"},
   "Open":{bg:"#EBF3FC",text:"#185FA5",dot:"#378ADD"},
   "In Progress":{bg:"#FEF4E6",text:"#854F0B",dot:"#EF9F27"},
@@ -121,7 +114,7 @@ const STATUS_CFG = {
   "Overdue":{bg:"#FCEDED",text:"#A32D2D",dot:"#E24B4A"},
 };
 
-const URG_CFG = {
+const UCFG = {
   "Critical":{bg:"#FCEDED",text:"#A32D2D"},
   "Urgent":{bg:"#FEF4E6",text:"#854F0B"},
   "On Track":{bg:"#EDF6E1",text:"#3B6D11"},
@@ -129,889 +122,518 @@ const URG_CFG = {
   "No Date":{bg:"#F5F4F1",text:"#888780"},
 };
 
-const ETA_CFG = {
+const ECFG = {
   ok:{bg:"#E2F5EE",text:"#0F6E56",border:"#1D9E75",label:"On time"},
   tight:{bg:"#FEF4E6",text:"#854F0B",border:"#EF9F27",label:"Cutting it close"},
   late:{bg:"#FCEDED",text:"#A32D2D",border:"#E24B4A",label:"After handover"},
   overdue:{bg:"#FCEDED",text:"#A32D2D",border:"#E24B4A",label:"ETA Passed"},
 };
 
-const CONF_CFG = {
+const CCFG = {
   green:{bg:"#E2F5EE",text:"#0F6E56",dot:"#1D9E75",label:"Ready"},
   amber:{bg:"#FEF4E6",text:"#854F0B",dot:"#EF9F27",label:"Watch"},
   red:{bg:"#FCEDED",text:"#A32D2D",dot:"#E24B4A",label:"At Risk"},
 };
 
-const STAT_LBL = {
+const SLBL = {
   active:{bg:"#EDF6E1",text:"#3B6D11",label:"Active"},
   refurb:{bg:"#EBF3FC",text:"#185FA5",label:"Active Refurb"},
   upcoming:{bg:"#F5F4F1",text:"#888780",label:"Upcoming"},
   complete:{bg:"#E2F5EE",text:"#0F6E56",label:"Complete"},
 };
 
-function storeKey(s) { return s.id || s.name; }
+function sk(s){return s.id||s.name;}
+function blankRow(){return {status:"Not Started",notes:"",actionOwner:"J&TJ",trackingInfo:"",vendorOverride:"",eta:"",na:false};}
+function initRows(sl){var r={};sl.forEach(function(s){r[sk(s)]={};CATS.forEach(function(c){r[sk(s)][c.key]=blankRow();});});return r;}
+function pd(d){if(!d)return null;var p=d.split("-");if(p.length!==3)return null;return new Date(Number(p[0]),Number(p[1])-1,Number(p[2]));}
+function du(d){if(!d)return null;var t=new Date();t.setHours(0,0,0,0);var x=pd(d);if(!x)return null;return Math.ceil((x-t)/86400000);}
+function ul(d){if(d===null)return"No Date";if(d<=7)return"Critical";if(d<=21)return"Urgent";if(d<=45)return"On Track";return"Planning";}
+function fd(s){if(!s)return"TBD";var d=pd(s);if(!d)return"TBD";return d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});}
+function fm(s){if(!s)return null;var d=pd(s);if(!d)return null;return d.toLocaleDateString("en-US",{month:"short",year:"numeric"});}
+function er(eta,ho){if(!eta)return null;var e=pd(eta);if(!e)return null;var t=new Date();t.setHours(0,0,0,0);if(Math.ceil((e-t)/86400000)<0)return"overdue";if(!ho)return"ok";var b=Math.ceil((pd(ho)-e)/86400000);if(b<0)return"late";if(b<=7)return"tight";return"ok";}
+function gac(rows,sid){return CATS.filter(function(c){return!rows[sid]||!rows[sid][c.key]||!rows[sid][c.key].na;});}
+function gdc(rows,sid){return gac(rows,sid).filter(function(c){return rows[sid]&&rows[sid][c.key]&&DONE_S.indexOf(rows[sid][c.key].status)>-1;});}
+function isc(rows,sid){var ac=gac(rows,sid);return ac.length>0&&ac.every(function(c){return rows[sid]&&rows[sid][c.key]&&DONE_S.indexOf(rows[sid][c.key].status)>-1;});}
+function gss(store,rows){var sid=sk(store);if(isc(rows,sid))return"complete";if(!store.cs)return"upcoming";var t=new Date();t.setHours(0,0,0,0);var cs=pd(store.cs);if(cs&&cs<=t)return store.type==="refurb"?"refurb":"active";return"upcoming";}
+function sob(arr){return arr.slice().sort(function(a,b){var ao=a.op||a.ho||a.cs,bo=b.op||b.ho||b.cs;if(!ao&&!bo)return 0;if(!ao)return 1;if(!bo)return-1;var da=pd(ao),db=pd(bo);if(!da&&!db)return 0;if(!da)return 1;if(!db)return-1;return da-db;});}
+function sco(store,rows){var sid=sk(store),ac=gac(rows,sid),done=gdc(rows,sid),ar=ac.filter(function(c){return rows[sid]&&rows[sid][c.key]&&RISK_S.indexOf(rows[sid][c.key].status)>-1;}),days=du(store.ho);if(ar.length>0)return"red";if(days!==null&&days<=14&&done.length<ac.length*0.7)return"red";if(days!==null&&days<=30&&done.length<ac.length*0.5)return"amber";if(ac.filter(function(c){return rows[sid]&&rows[sid][c.key]&&!rows[sid][c.key].eta&&DONE_S.indexOf(rows[sid][c.key].status)===-1;}).length>ac.length*0.5)return"amber";return"green";}
+function ss(store,rows){var sid=sk(store),ac=gac(rows,sid);if(!ac.length)return null;var done=gdc(rows,sid),we=0,ot=0;ac.forEach(function(c){var row=rows[sid]&&rows[sid][c.key]?rows[sid][c.key]:blankRow();if(row.eta){we++;var x=er(row.eta,store.ho);if(x==="ok"||x==="tight")ot++;}});return{cp:Math.round((done.length/ac.length)*100),otp:we>0?Math.round((ot/we)*100):null,done:done.length,total:ac.length};}
 
-function blankRow() {
-  return { status:"Not Started", notes:"", actionOwner:"J&TJ", trackingInfo:"", vendorOverride:"", eta:"", na:false };
+function btn(text, onClick, active, extra) {
+  return e("button", Object.assign({onClick:onClick, style:Object.assign({fontSize:12,padding:"5px 12px",borderRadius:99,border:"1.5px solid "+(active?PINK:PM),background:active?PINK:"#fff",color:active?"#fff":PD,cursor:"pointer",fontWeight:active?600:400}, extra||{})}, text));
 }
 
-function initRows(storeList) {
-  const r = {};
-  storeList.forEach(function(s) {
-    r[storeKey(s)] = {};
-    CATS.forEach(function(c) { r[storeKey(s)][c.key] = blankRow(); });
-  });
-  return r;
-}
-
-function parseDate(d) {
-  if (!d) return null;
-  const p = d.split("-");
-  if (p.length !== 3) return null;
-  return new Date(Number(p[0]), Number(p[1])-1, Number(p[2]));
-}
-
-function daysUntil(d) {
-  if (!d) return null;
-  const t = new Date(); t.setHours(0,0,0,0);
-  const x = parseDate(d);
-  if (!x) return null;
-  return Math.ceil((x - t) / 86400000);
-}
-
-function urgLabel(d) {
-  if (d === null) return "No Date";
-  if (d <= 7) return "Critical";
-  if (d <= 21) return "Urgent";
-  if (d <= 45) return "On Track";
-  return "Planning";
-}
-
-function fmtDate(s) {
-  if (!s) return "TBD";
-  const d = parseDate(s);
-  if (!d) return "TBD";
-  return d.toLocaleDateString("en-US", {month:"short", day:"numeric", year:"numeric"});
-}
-
-function fmtMonth(s) {
-  if (!s) return null;
-  const d = parseDate(s);
-  if (!d) return null;
-  return d.toLocaleDateString("en-US", {month:"short", year:"numeric"});
-}
-
-function etaRisk(eta, ho) {
-  if (!eta) return null;
-  const e = parseDate(eta);
-  if (!e) return null;
-  const t = new Date(); t.setHours(0,0,0,0);
-  if (Math.ceil((e - t) / 86400000) < 0) return "overdue";
-  if (!ho) return "ok";
-  const b = Math.ceil((parseDate(ho) - e) / 86400000);
-  if (b < 0) return "late";
-  if (b <= 7) return "tight";
-  return "ok";
-}
-
-function getActiveCats(rows, sid) {
-  return CATS.filter(function(c) { return !rows[sid]?.[c.key]?.na; });
-}
-
-function getDoneCats(rows, sid) {
-  return getActiveCats(rows, sid).filter(function(c) {
-    return DONE_S.includes(rows[sid]?.[c.key]?.status);
-  });
-}
-
-function isComplete(rows, sid) {
-  const ac = getActiveCats(rows, sid);
-  return ac.length > 0 && ac.every(function(c) { return DONE_S.includes(rows[sid]?.[c.key]?.status); });
-}
-
-function getStoreStatus(store, rows) {
-  const sid = storeKey(store);
-  if (isComplete(rows, sid)) return "complete";
-  if (!store.cs) return "upcoming";
-  const today = new Date(); today.setHours(0,0,0,0);
-  const cs = parseDate(store.cs);
-  if (cs && cs <= today) return store.type === "refurb" ? "refurb" : "active";
-  return "upcoming";
-}
-
-function storeScore(store, rows) {
-  const sid = storeKey(store);
-  const ac = getActiveCats(rows, sid);
-  if (!ac.length) return null;
-  const done = getDoneCats(rows, sid);
-  let we = 0, ot = 0;
-  ac.forEach(function(c) {
-    const row = rows[sid]?.[c.key] || blankRow();
-    if (row.eta) {
-      we++;
-      const r = etaRisk(row.eta, store.ho);
-      if (r === "ok" || r === "tight") ot++;
-    }
-  });
-  return {
-    completionPct: Math.round((done.length / ac.length) * 100),
-    onTimePct: we > 0 ? Math.round((ot / we) * 100) : null,
-    done: done.length,
-    total: ac.length,
-  };
-}
-
-function storeConfidence(store, rows) {
-  const sid = storeKey(store);
-  const ac = getActiveCats(rows, sid);
-  const done = getDoneCats(rows, sid);
-  const atRisk = ac.filter(function(c) { return RISK_S.includes(rows[sid]?.[c.key]?.status); });
-  const days = daysUntil(store.ho);
-  if (atRisk.length > 0) return "red";
-  if (days !== null && days <= 14 && done.length < ac.length * 0.7) return "red";
-  if (days !== null && days <= 30 && done.length < ac.length * 0.5) return "amber";
-  if (ac.filter(function(c) { return !rows[sid]?.[c.key]?.eta && !DONE_S.includes(rows[sid]?.[c.key]?.status); }).length > ac.length * 0.5) return "amber";
-  return "green";
-}
-
-function sortByOpen(arr) {
-  return [...arr].sort(function(a, b) {
-    const ao = a.op || a.ho || a.cs;
-    const bo = b.op || b.ho || b.cs;
-    if (!ao && !bo) return 0;
-    if (!ao) return 1;
-    if (!bo) return -1;
-    const da = parseDate(ao), db = parseDate(bo);
-    if (!da && !db) return 0;
-    if (!da) return 1;
-    if (!db) return -1;
-    return da - db;
-  });
-}
-
-function Pill({ label, cfg }) {
-  return (
-    <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:12,fontWeight:500,padding:"3px 10px",borderRadius:99,background:cfg.bg,color:cfg.text,whiteSpace:"nowrap"}}>
-      <span style={{width:6,height:6,borderRadius:"50%",background:cfg.text,flexShrink:0}}></span>
-      {label}
-    </span>
-  );
-}
-
-function RefurbBadge() {
-  return <span style={{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:99,background:"#EBF3FC",color:"#185FA5",border:"1px solid #85B7EB",whiteSpace:"nowrap"}}>Refurb</span>;
-}
-
-function ScoreRing({ pct, size }) {
-  size = size || 48;
-  const r = (size-6)/2;
-  const circ = 2 * Math.PI * r;
-  const fill = circ - (pct/100) * circ;
-  const c = pct >= 80 ? "#1D9E75" : pct >= 60 ? "#EF9F27" : "#E24B4A";
-  return (
-    <div style={{position:"relative",width:size,height:size,flexShrink:0}}>
-      <svg width={size} height={size} style={{transform:"rotate(-90deg)"}}>
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#F4C0D1" strokeWidth={4}/>
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={c} strokeWidth={4} strokeDasharray={circ} strokeDashoffset={fill} strokeLinecap="round"/>
-      </svg>
-      <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:c}}>{pct}%</div>
-    </div>
-  );
-}
-
-function StatCard({ label, value, sub, color }) {
-  return (
-    <div style={{background:"#fff",borderRadius:18,border:`1px solid ${PINK_M}`,padding:"20px 24px",flex:1,minWidth:160}}>
-      <div style={{fontSize:11,color:"#C8C6BE",fontWeight:500,marginBottom:8}}>{label}</div>
-      <div style={{fontSize:32,fontWeight:700,color:color||PINK,marginBottom:4}}>{value}</div>
-      {sub && <div style={{fontSize:12,color:"#888780"}}>{sub}</div>}
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div style={{background:"#fff",borderRadius:20,border:`1px solid ${PINK_M}`,padding:"60px 24px",textAlign:"center"}}>
-      <div style={{fontSize:40,marginBottom:16}}>🎉</div>
-      <div style={{fontSize:18,fontWeight:700,color:PINK_D,marginBottom:8}}>No completed stores yet</div>
-      <div style={{fontSize:14,color:"#888780",maxWidth:400,margin:"0 auto"}}>Stores appear here automatically when all FF&amp;E items are marked done.</div>
-    </div>
+function Pill(props) {
+  return e("span", {style:{display:"inline-flex",alignItems:"center",gap:5,fontSize:12,fontWeight:500,padding:"3px 10px",borderRadius:99,background:props.cfg.bg,color:props.cfg.text,whiteSpace:"nowrap"}},
+    e("span", {style:{width:6,height:6,borderRadius:"50%",background:props.cfg.text,flexShrink:0}}),
+    props.label
   );
 }
 
 function App() {
-  const [ready, setReady] = useState(false);
-  const [stores, setStores] = useState(STORES);
-  const [rows, setRows] = useState(function() { return initRows(STORES); });
-  const [view, setView] = useState("site");
-  const [filter, setFilter] = useState("active");
-  const [activeStore, setActiveStore] = useState(storeKey(STORES[0]));
-  const [editing, setEditing] = useState(false);
-  const [saveMsg, setSaveMsg] = useState("");
-  const [notes, setNotes] = useState({});
-  const [plSort, setPlSort] = useState({col:"op",dir:"asc"});
-  const [plFilter, setPlFilter] = useState({region:"All",cm:"All",type:"All",status:"All"});
-  const [plSearch, setPlSearch] = useState("");
-  const [showAdd, setShowAdd] = useState(false);
-  const [newStore, setNewStore] = useState({name:"",id:"",region:"East",cm:"",cs:"",ho:"",op:"",type:"new"});
-  const [dashRegion, setDashRegion] = useState("All");
-  const [dashCM, setDashCM] = useState("All");
+  var state = {
+    ready: useState(false),
+    stores: useState(STORES),
+    rows: useState(function(){return initRows(STORES);}),
+    view: useState("site"),
+    filter: useState("active"),
+    activeStore: useState(sk(STORES[0])),
+    editing: useState(false),
+    saveMsg: useState(""),
+    notes: useState({}),
+    plSearch: useState(""),
+    showAdd: useState(false),
+    newStore: useState({name:"",id:"",region:"East",cm:"",cs:"",ho:"",op:"",type:"new"}),
+    dashRegion: useState("All"),
+    dashCM: useState("All"),
+    plSort: useState({col:"op",dir:"asc"}),
+    plFilter: useState({region:"All",cm:"All",type:"All",status:"All"}),
+  };
+
+  var ready = state.ready[0], setReady = state.ready[1];
+  var stores = state.stores[0], setStores = state.stores[1];
+  var rows = state.rows[0], setRows = state.rows[1];
+  var view = state.view[0], setView = state.view[1];
+  var filter = state.filter[0], setFilter = state.filter[1];
+  var activeStore = state.activeStore[0], setActiveStore = state.activeStore[1];
+  var editing = state.editing[0], setEditing = state.editing[1];
+  var saveMsg = state.saveMsg[0], setSaveMsg = state.saveMsg[1];
+  var notes = state.notes[0], setNotes = state.notes[1];
+  var plSearch = state.plSearch[0], setPlSearch = state.plSearch[1];
+  var showAdd = state.showAdd[0], setShowAdd = state.showAdd[1];
+  var newStore = state.newStore[0], setNewStore = state.newStore[1];
+  var dashRegion = state.dashRegion[0], setDashRegion = state.dashRegion[1];
+  var dashCM = state.dashCM[0], setDashCM = state.dashCM[1];
+  var plSort = state.plSort[0], setPlSort = state.plSort[1];
+  var plFilter = state.plFilter[0], setPlFilter = state.plFilter[1];
 
   useEffect(function() {
     try {
-      const sr = localStorage.getItem(SK);
-      const rr = localStorage.getItem(RK);
-      const nn = localStorage.getItem(NK);
-      if (sr) {
-        const parsed = JSON.parse(sr);
-        setStores(parsed);
-        if (rr) {
-          const base = initRows(parsed);
-          setRows(Object.assign(base, JSON.parse(rr)));
-        }
-      } else if (rr) {
-        const base = initRows(STORES);
-        setRows(Object.assign(base, JSON.parse(rr)));
-      }
+      var sr = localStorage.getItem(SK), rr = localStorage.getItem(RK), nn = localStorage.getItem(NK);
+      if (sr) { var ps = JSON.parse(sr); setStores(ps); if(rr){var base=initRows(ps);setRows(Object.assign(base,JSON.parse(rr)));} }
+      else if (rr) { var base2=initRows(STORES); setRows(Object.assign(base2,JSON.parse(rr))); }
       if (nn) setNotes(JSON.parse(nn));
-    } catch(e) {}
+    } catch(ex) {}
     setReady(true);
   }, []);
 
-  const save = useCallback(function(ns, nr, nn) {
-    try {
-      localStorage.setItem(SK, JSON.stringify(ns));
-      localStorage.setItem(RK, JSON.stringify(nr));
-      localStorage.setItem(NK, JSON.stringify(nn));
-      setSaveMsg("Saved ✓");
-      setTimeout(function() { setSaveMsg(""); }, 1600);
-    } catch(e) {}
+  var save = useCallback(function(ns, nr, nn) {
+    try { localStorage.setItem(SK,JSON.stringify(ns)); localStorage.setItem(RK,JSON.stringify(nr)); localStorage.setItem(NK,JSON.stringify(nn)); setSaveMsg("Saved ✓"); setTimeout(function(){setSaveMsg("");},1600); } catch(ex) {}
   }, []);
 
-  function updateRow(sid, catKey, field, val) {
+  function updRow(sid, catKey, field, val) {
     setRows(function(prev) {
-      const next = Object.assign({}, prev);
+      var next = Object.assign({}, prev);
       next[sid] = Object.assign({}, prev[sid]);
-      next[sid][catKey] = Object.assign({}, prev[sid][catKey], {[field]: val});
+      next[sid][catKey] = Object.assign({}, (prev[sid]&&prev[sid][catKey])||blankRow(), {[field]:val});
       save(stores, next, notes);
       return next;
     });
   }
 
-  function updateStore(id, field, val) {
+  function updStore(id, field, val) {
     setStores(function(prev) {
-      const next = prev.map(function(s) {
-        return storeKey(s) === id ? Object.assign({}, s, {[field]: val}) : s;
-      });
+      var next = prev.map(function(s) { return sk(s)===id ? Object.assign({},s,{[field]:val}) : s; });
       save(next, rows, notes);
       return next;
     });
   }
 
-  function updateNotes(sid, val) {
-    const next = Object.assign({}, notes, {[sid]: val});
+  function updNotes(sid, val) {
+    var next = Object.assign({}, notes, {[sid]:val});
     setNotes(next);
     save(stores, rows, next);
   }
 
   function addStoreHandler() {
     if (!newStore.name.trim()) return;
-    const ns = [...stores, Object.assign({}, newStore)];
-    const newRows = Object.assign({}, rows);
-    newRows[storeKey(newStore)] = {};
-    CATS.forEach(function(c) { newRows[storeKey(newStore)][c.key] = blankRow(); });
-    setStores(ns);
-    setRows(newRows);
-    save(ns, newRows, notes);
+    var ns = stores.concat([Object.assign({},newStore)]);
+    var nr = Object.assign({}, rows);
+    nr[sk(newStore)] = {};
+    CATS.forEach(function(c){ nr[sk(newStore)][c.key] = blankRow(); });
+    setStores(ns); setRows(nr); save(ns,nr,notes);
     setShowAdd(false);
     setNewStore({name:"",id:"",region:"East",cm:"",cs:"",ho:"",op:"",type:"new"});
   }
 
-  const categorized = useMemo(function() {
-    const active=[], refurb=[], upcoming=[], complete=[];
-    stores.forEach(function(s) {
-      const st = getStoreStatus(s, rows);
-      if (st === "complete") complete.push(s);
-      else if (st === "active") active.push(s);
-      else if (st === "refurb") refurb.push(s);
-      else upcoming.push(s);
-    });
-    return {
-      active: sortByOpen(active),
-      refurb: sortByOpen(refurb),
-      upcoming: sortByOpen(upcoming),
-      complete: sortByOpen(complete),
-    };
+  var cat = useMemo(function() {
+    var active=[],refurb=[],upcoming=[],complete=[];
+    stores.forEach(function(s){ var st=gss(s,rows); if(st==="complete")complete.push(s); else if(st==="active")active.push(s); else if(st==="refurb")refurb.push(s); else upcoming.push(s); });
+    return {active:sob(active),refurb:sob(refurb),upcoming:sob(upcoming),complete:sob(complete)};
   }, [stores, rows]);
 
-  const filtStores = useMemo(function() {
-    if (filter === "active") return categorized.active;
-    if (filter === "refurb") return categorized.refurb;
-    if (filter === "upcoming") return categorized.upcoming;
-    if (filter === "complete") return categorized.complete;
-    return sortByOpen([...categorized.active, ...categorized.refurb, ...categorized.upcoming, ...categorized.complete]);
-  }, [filter, categorized]);
+  var filtStores = useMemo(function() {
+    if(filter==="active")return cat.active;
+    if(filter==="refurb")return cat.refurb;
+    if(filter==="upcoming")return cat.upcoming;
+    if(filter==="complete")return cat.complete;
+    return sob(cat.active.concat(cat.refurb).concat(cat.upcoming).concat(cat.complete));
+  }, [filter, cat]);
 
-  const asd = useMemo(function() {
-    const found = stores.find(function(s) { return storeKey(s) === activeStore; });
-    if (found) return found;
-    const list = filter === "active" ? categorized.active : filter === "refurb" ? categorized.refurb : filter === "upcoming" ? categorized.upcoming : filter === "complete" ? categorized.complete : categorized.active;
-    return list[0] || stores[0];
-  }, [stores, activeStore, filter, categorized]);
+  var asd = useMemo(function() {
+    var found = stores.find(function(s){return sk(s)===activeStore;});
+    if(found)return found;
+    var list = filter==="active"?cat.active:filter==="refurb"?cat.refurb:filter==="upcoming"?cat.upcoming:filter==="complete"?cat.complete:cat.active;
+    return list[0]||stores[0];
+  }, [stores,activeStore,filter,cat]);
 
-  const sid = storeKey(asd);
-  const days = daysUntil(asd.ho);
-  const urg = urgLabel(days);
-  const aCats = getActiveCats(rows, sid);
-  const dCats = getDoneCats(rows, sid);
+  var sid = sk(asd);
+  var days = du(asd.ho);
+  var urg = ul(days);
+  var aCats = gac(rows,sid);
+  var dCats = gdc(rows,sid);
 
-  const allCMs = useMemo(function() {
-    return [...new Set(stores.map(function(s) { return s.cm; }).filter(Boolean))].sort();
-  }, [stores]);
+  var allCMs = useMemo(function(){return[...new Set(stores.map(function(s){return s.cm;}).filter(Boolean))].sort();},[stores]);
+  var counts = {active:cat.active.length,refurb:cat.refurb.length,upcoming:cat.upcoming.length,complete:cat.complete.length,all:stores.length};
 
-  const counts = {
-    active: categorized.active.length,
-    refurb: categorized.refurb.length,
-    upcoming: categorized.upcoming.length,
-    complete: categorized.complete.length,
-    all: stores.length,
-  };
-
-  const plStores = useMemo(function() {
-    let arr = [...stores];
-    if (plFilter.region !== "All") arr = arr.filter(function(s) { return s.region === plFilter.region; });
-    if (plFilter.cm !== "All") arr = arr.filter(function(s) { return s.cm === plFilter.cm; });
-    if (plFilter.type !== "All") arr = arr.filter(function(s) { return s.type === plFilter.type; });
-    if (plFilter.status !== "All") arr = arr.filter(function(s) { return getStoreStatus(s, rows) === plFilter.status; });
-    if (plSearch.trim()) {
-      const q = plSearch.toLowerCase();
-      arr = arr.filter(function(s) {
-        return s.name.toLowerCase().includes(q) || (s.id||"").toLowerCase().includes(q) || (s.cm||"").toLowerCase().includes(q);
-      });
-    }
-    arr.sort(function(a, b) {
-      if (plSort.col === "name") return plSort.dir === "asc" ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
-      if (plSort.col === "cm") return plSort.dir === "asc" ? (a.cm||"").localeCompare(b.cm||"") : (b.cm||"").localeCompare(a.cm||"");
-      if (plSort.col === "region") return plSort.dir === "asc" ? (a.region||"").localeCompare(b.region||"") : (b.region||"").localeCompare(a.region||"");
-      if (plSort.col === "type") return plSort.dir === "asc" ? (a.type||"").localeCompare(b.type||"") : (b.type||"").localeCompare(a.type||"");
-      function getD(s) { const x = parseDate(s[plSort.col]); return x ? x.getTime() : (plSort.dir === "asc" ? Infinity : -Infinity); }
-      return plSort.dir === "asc" ? getD(a) - getD(b) : getD(b) - getD(a);
+  var plStores = useMemo(function(){
+    var arr = stores.slice();
+    if(plFilter.region!=="All")arr=arr.filter(function(s){return s.region===plFilter.region;});
+    if(plFilter.cm!=="All")arr=arr.filter(function(s){return s.cm===plFilter.cm;});
+    if(plFilter.type!=="All")arr=arr.filter(function(s){return s.type===plFilter.type;});
+    if(plFilter.status!=="All")arr=arr.filter(function(s){return gss(s,rows)===plFilter.status;});
+    if(plSearch.trim()){var q=plSearch.toLowerCase();arr=arr.filter(function(s){return s.name.toLowerCase().includes(q)||(s.id||"").toLowerCase().includes(q)||(s.cm||"").toLowerCase().includes(q);});}
+    arr.sort(function(a,b){
+      if(plSort.col==="name")return plSort.dir==="asc"?a.name.localeCompare(b.name):b.name.localeCompare(a.name);
+      if(plSort.col==="cm")return plSort.dir==="asc"?(a.cm||"").localeCompare(b.cm||""):(b.cm||"").localeCompare(a.cm||"");
+      if(plSort.col==="region")return plSort.dir==="asc"?(a.region||"").localeCompare(b.region||""):(b.region||"").localeCompare(a.region||"");
+      if(plSort.col==="type")return plSort.dir==="asc"?(a.type||"").localeCompare(b.type||""):(b.type||"").localeCompare(a.type||"");
+      function getD(s){var x=pd(s[plSort.col]);return x?x.getTime():(plSort.dir==="asc"?Infinity:-Infinity);}
+      return plSort.dir==="asc"?getD(a)-getD(b):getD(b)-getD(a);
     });
     return arr;
-  }, [stores, rows, plSort, plFilter, plSearch]);
+  },[stores,rows,plSort,plFilter,plSearch]);
 
-  const dashStores = useMemo(function() {
-    let arr = [...categorized.active, ...categorized.refurb];
-    if (dashRegion !== "All") arr = arr.filter(function(s) { return s.region === dashRegion; });
-    if (dashCM !== "All") arr = arr.filter(function(s) { return s.cm === dashCM; });
-    return sortByOpen(arr);
-  }, [categorized, dashRegion, dashCM]);
+  var dashStores = useMemo(function(){
+    var arr=cat.active.concat(cat.refurb);
+    if(dashRegion!=="All")arr=arr.filter(function(s){return s.region===dashRegion;});
+    if(dashCM!=="All")arr=arr.filter(function(s){return s.cm===dashCM;});
+    return sob(arr);
+  },[cat,dashRegion,dashCM]);
 
-  const dashMetrics = useMemo(function() {
-    const today = new Date(); today.setHours(0,0,0,0);
-    const tm = today.getMonth(), ty = today.getFullYear();
-    const otm = stores.filter(function(s) {
-      if (!s.op) return false;
-      const d = parseDate(s.op);
-      return d && d.getMonth() === tm && d.getFullYear() === ty;
-    }).length;
-    const activeAll = [...categorized.active, ...categorized.refurb];
-    let ar=0, we=0, ot=0;
-    activeAll.forEach(function(s) {
-      const sid2 = storeKey(s);
-      getActiveCats(rows, sid2).forEach(function(c) {
-        const row = rows[sid2]?.[c.key] || blankRow();
-        if (RISK_S.includes(row.status)) ar++;
-        if (row.eta) {
-          we++;
-          const x = etaRisk(row.eta, s.ho);
-          if (x === "ok" || x === "tight") ot++;
-        }
-      });
-    });
-    const otr = we > 0 ? Math.round((ot/we)*100) : null;
-    const bm = {};
-    stores.forEach(function(s) { const m = fmtMonth(s.op); if (m) bm[m] = (bm[m]||0)+1; });
-    const vl = {};
-    activeAll.forEach(function(s) {
-      const sid2 = storeKey(s);
-      CATS.forEach(function(c) {
-        const row = rows[sid2]?.[c.key] || blankRow();
-        if (row.na) return;
-        const v = row.vendorOverride || c.vendor(s.region);
-        if (!vl[v]) vl[v] = {total:0,done:0,atRisk:0,withEta:0,onTime:0};
-        vl[v].total++;
-        if (DONE_S.includes(row.status)) vl[v].done++;
-        if (RISK_S.includes(row.status)) vl[v].atRisk++;
-        if (row.eta) {
-          vl[v].withEta++;
-          const x = etaRisk(row.eta, s.ho);
-          if (x === "ok" || x === "tight") vl[v].onTime++;
-        }
-      });
-    });
-    return {otm, ar, otr, we, bm, vl, total: stores.length};
-  }, [stores, rows, categorized]);
+  var dashM = useMemo(function(){
+    var today=new Date();today.setHours(0,0,0,0);
+    var tm=today.getMonth(),ty=today.getFullYear();
+    var otm=stores.filter(function(s){if(!s.op)return false;var d=pd(s.op);return d&&d.getMonth()===tm&&d.getFullYear()===ty;}).length;
+    var aAll=cat.active.concat(cat.refurb),ar=0,we=0,ot=0;
+    aAll.forEach(function(s){var sid2=sk(s);gac(rows,sid2).forEach(function(c){var row=(rows[sid2]&&rows[sid2][c.key])||blankRow();if(RISK_S.indexOf(row.status)>-1)ar++;if(row.eta){we++;var x=er(row.eta,s.ho);if(x==="ok"||x==="tight")ot++;}});});
+    var otr=we>0?Math.round((ot/we)*100):null;
+    var bm={};stores.forEach(function(s){var m=fm(s.op);if(m)bm[m]=(bm[m]||0)+1;});
+    var vl={};aAll.forEach(function(s){var sid2=sk(s);CATS.forEach(function(c){var row=(rows[sid2]&&rows[sid2][c.key])||blankRow();if(row.na)return;var v=row.vendorOverride||c.vendor(s.region);if(!vl[v])vl[v]={total:0,done:0,atRisk:0,withEta:0,onTime:0};vl[v].total++;if(DONE_S.indexOf(row.status)>-1)vl[v].done++;if(RISK_S.indexOf(row.status)>-1)vl[v].atRisk++;if(row.eta){vl[v].withEta++;var x=er(row.eta,s.ho);if(x==="ok"||x==="tight")vl[v].onTime++;}});});
+    return{otm,ar,otr,we,bm,vl,total:stores.length};
+  },[stores,rows,cat]);
 
-  if (!ready) return <div style={{padding:40,textAlign:"center",color:"#C8C6BE"}}>Loading...</div>;
+  if(!ready) return e("div",{style:{padding:40,textAlign:"center",color:"#C8C6BE"}},"Loading...");
 
-  const iS = function(extra) {
-    return Object.assign({fontSize:12,padding:"5px 10px",borderRadius:10,border:`1px solid ${PINK_M}`,background:"#FDF5F8",outline:"none",color:"#444441",width:"100%"}, extra||{});
-  };
+  var fBtns=[["active","Active ("+counts.active+")"],["refurb","Active Refurb ("+counts.refurb+")"],["upcoming","Upcoming ("+counts.upcoming+")"],["complete","Completed ("+counts.complete+")"],["all","All ("+counts.all+")"]];
 
-  const fBtns = [
-    ["active", `Active (${counts.active})`],
-    ["refurb", `Active Refurb (${counts.refurb})`],
-    ["upcoming", `Upcoming (${counts.upcoming})`],
-    ["complete", `Completed (${counts.complete})`],
-    ["all", `All (${counts.all})`],
-  ];
-
-  function filterClick(val) {
+  function filterClick(val){
     setFilter(val);
-    const list = val==="active" ? categorized.active : val==="refurb" ? categorized.refurb : val==="upcoming" ? categorized.upcoming : val==="complete" ? categorized.complete : sortByOpen([...categorized.active,...categorized.refurb,...categorized.upcoming,...categorized.complete]);
-    if (list[0]) setActiveStore(storeKey(list[0]));
+    var list=val==="active"?cat.active:val==="refurb"?cat.refurb:val==="upcoming"?cat.upcoming:val==="complete"?cat.complete:sob(cat.active.concat(cat.refurb).concat(cat.upcoming).concat(cat.complete));
+    if(list[0])setActiveStore(sk(list[0]));
   }
 
-  function toggleSort(col) {
-    setPlSort(function(prev) { return {col, dir: prev.col===col && prev.dir==="asc" ? "desc" : "asc"}; });
-  }
+  var iS=function(x){return Object.assign({fontSize:12,padding:"5px 10px",borderRadius:10,border:"1px solid "+PM,background:"#FDF5F8",outline:"none",color:"#444441",width:"100%"},x||{});};
 
-  const thS = {padding:"10px 12px",textAlign:"left",fontSize:11,fontWeight:700,color:PINK_D,borderBottom:`2px solid ${PINK_M}`,whiteSpace:"nowrap",background:PINK_L,cursor:"pointer"};
-  const tdS = {padding:"8px 12px",fontSize:12,color:"#444441",borderBottom:`1px solid #FDF5F8`};
+  var thS={padding:"10px 12px",textAlign:"left",fontSize:11,fontWeight:700,color:PD,borderBottom:"2px solid "+PM,whiteSpace:"nowrap",background:PL,cursor:"pointer"};
+  var tdS={padding:"8px 12px",fontSize:12,color:"#444441",borderBottom:"1px solid #FDF5F8"};
 
-  return (
-    <div style={{minHeight:"100vh",background:"#FDF5F8"}}>
-
-      {/* NAV */}
-      <div style={{background:"#fff",borderBottom:`1px solid ${PINK_M}`,padding:"0 20px",display:"flex",alignItems:"center",justifyContent:"space-between",height:56,position:"sticky",top:0,zIndex:50}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:28,height:28,borderRadius:8,background:PINK,display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <span style={{color:"#fff",fontSize:14,fontWeight:700}}>J</span>
-          </div>
-          <span style={{fontSize:14,fontWeight:600,color:PINK_D}}>FF&amp;E Tracker</span>
-        </div>
-        <div style={{display:"flex",alignItems:"center",gap:6}}>
-          {saveMsg && <span style={{fontSize:12,color:"#1D9E75",background:"#E2F5EE",padding:"3px 10px",borderRadius:99}}>{saveMsg}</span>}
-          {[["site","By Store"],["master","All Stores"],["vendor","By Vendor"],["pipeline","Pipeline"],["dashboard","Dashboard"]].map(function([v,l]) {
-            return <button key={v} onClick={function(){setView(v);}} style={{fontSize:12,padding:"5px 12px",borderRadius:99,border:`1.5px solid ${view===v?PINK:PINK_M}`,background:view===v?PINK:"#fff",color:view===v?"#fff":PINK_D,cursor:"pointer",fontWeight:view===v?600:400}}>{l}</button>;
-          })}
-        </div>
-      </div>
-
-      <div className="wrap" style={{overflowX:"auto"}}>
-
-      {/* BY STORE */}
-      {view === "site" && (
-        <div style={{maxWidth:1100,margin:"0 auto",padding:"24px 20px"}}>
-          <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
-            <span style={{fontSize:12,color:"#C8C6BE",fontWeight:500}}>Store</span>
-            {fBtns.map(function([val,label]) {
-              return <button key={val} onClick={function(){filterClick(val);}} style={{fontSize:12,padding:"4px 12px",borderRadius:99,border:`1px solid ${filter===val?PINK:PINK_M}`,background:filter===val?PINK_L:"#fff",color:filter===val?PINK:PINK_D,cursor:"pointer",fontWeight:filter===val?600:400}}>{label}</button>;
-            })}
-            {filtStores.length > 0
-              ? <select value={activeStore} onChange={function(e){setActiveStore(e.target.value);}} style={{fontSize:13,padding:"6px 14px",borderRadius:99,border:`1.5px solid ${PINK_M}`,color:PINK_D,background:"#fff",fontWeight:600,cursor:"pointer",outline:"none",marginLeft:4}}>
-                  {filtStores.map(function(s) { return <option key={storeKey(s)} value={storeKey(s)}>{s.name}{s.type==="refurb"?" (Refurb)":""}{["active","refurb"].includes(getStoreStatus(s,rows))?" ★":""}</option>; })}
-                </select>
-              : <span style={{marginLeft:8,fontSize:13,color:"#C8C6BE",fontStyle:"italic"}}>{filter==="complete" ? "No completed stores yet" : "No stores here"}</span>
-            }
-          </div>
-
-          {filter === "complete" && categorized.complete.length === 0 ? <EmptyState /> : (
-            asd && <>
-              <div style={{background:"#fff",borderRadius:20,border:`1px solid ${PINK_M}`,padding:"20px 24px",marginBottom:16}}>
-                <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
-                  <div>
-                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,flexWrap:"wrap"}}>
-                      <h1 style={{fontSize:20,fontWeight:700,color:PINK_D}}>{asd.name}</h1>
-                      {asd.type === "refurb" && <RefurbBadge />}
-                      <Pill label={urg} cfg={URG_CFG[urg]} />
-                    </div>
-                    <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
-                      {[["CM",asd.cm],["Region",asd.region],["Store ID",asd.id||"—"],["Construction Start",fmtDate(asd.cs)],["Handover",fmtDate(asd.ho)],["Store Open",fmtDate(asd.op)]].map(function([k,v]) {
-                        return <div key={k}><div style={{fontSize:11,color:"#C8C6BE",fontWeight:500,marginBottom:1}}>{k}</div><div style={{fontSize:13,fontWeight:600,color:PINK_D}}>{v}</div></div>;
-                      })}
-                      {days !== null && <div><div style={{fontSize:11,color:"#C8C6BE",fontWeight:500,marginBottom:1}}>Days Out</div><div style={{fontSize:13,fontWeight:700,color:days<=7?"#A32D2D":days<=21?"#854F0B":PINK_D}}>{days}d</div></div>}
-                    </div>
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",gap:12}}>
-                    {isComplete(rows,sid) && <div style={{background:"#E2F5EE",borderRadius:99,padding:"4px 12px"}}><span style={{fontSize:12,fontWeight:600,color:"#0F6E56"}}>✓ Complete</span></div>}
-                    <div style={{textAlign:"center"}}>
-                      <div style={{fontSize:22,fontWeight:700,color:dCats.length===aCats.length&&aCats.length>0?"#0F6E56":PINK}}>{dCats.length}/{aCats.length}</div>
-                      <div style={{fontSize:11,color:"#C8C6BE"}}>complete</div>
-                    </div>
-                    <button onClick={function(){setEditing(!editing);}} style={{fontSize:12,padding:"6px 14px",borderRadius:99,border:`1px solid ${PINK_M}`,background:editing?PINK:"#fff",color:editing?"#fff":PINK_D,cursor:"pointer"}}>{editing?"Done":"Edit Details"}</button>
-                  </div>
-                </div>
-                {editing && (
-                  <div style={{marginTop:16,paddingTop:16,borderTop:`1px solid ${PINK_M}`,display:"flex",gap:12,flexWrap:"wrap"}}>
-                    {[["Construction Start","cs","date"],["Handover","ho","date"],["Store Open","op","date"],["CM","cm","text"],["Store ID","id","text"],["Region","region","text"]].map(function([label,field,type]) {
-                      return <div key={field}><div style={{fontSize:11,color:"#C8C6BE",marginBottom:4}}>{label}</div><input type={type} value={asd[field]||""} onChange={function(e){updateStore(sid,field,e.target.value);}} style={{fontSize:13,padding:"6px 12px",borderRadius:10,border:`1px solid ${PINK_M}`,outline:"none",background:"#FDF5F8",width:field==="id"||field==="region"?100:160}}/></div>;
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:16}}>
-                {CATS.map(function(cat) {
-                  const row = rows[sid]?.[cat.key] || blankRow();
-                  const sc = STATUS_CFG[row.status] || STATUS_CFG["Not Started"];
-                  const vendor = row.vendorOverride || cat.vendor(asd.region);
-                  const risk = DONE_S.includes(row.status) ? null : etaRisk(row.eta, asd.ho);
-                  const ec = risk ? ETA_CFG[risk] : null;
-                  return (
-                    <div key={cat.key} style={{background:row.na?"#F9F9F9":"#fff",borderRadius:16,border:`1px solid ${row.na?"#E8E6DF":PINK_M}`,padding:"14px 20px",opacity:row.na?0.5:1}}>
-                      <div style={{display:"grid",gridTemplateColumns:"170px 140px 90px 1fr 110px auto auto",gap:10,alignItems:"center"}}>
-                        <div style={{display:"flex",alignItems:"center",gap:8}}>
-                          <span style={{fontSize:16}}>{cat.emoji}</span>
-                          <span style={{fontSize:14,fontWeight:600,color:row.na?"#C8C6BE":PINK_D}}>{cat.label}</span>
-                        </div>
-                        <input value={vendor} onChange={function(e){updateRow(sid,cat.key,"vendorOverride",e.target.value);}} disabled={row.na} style={iS({border:`1px solid ${row.vendorOverride?"#EF9F27":PINK_M}`,background:row.vendorOverride?"#FEF4E6":"#FDF5F8",color:row.vendorOverride?"#854F0B":"#5F5E5A"})} />
-                        <select value={row.actionOwner||"J&TJ"} onChange={function(e){updateRow(sid,cat.key,"actionOwner",e.target.value);}} disabled={row.na} style={iS()}>
-                          {["J&TJ","Vendor","CM"].map(function(o){return <option key={o}>{o}</option>;})}
-                        </select>
-                        <input value={row.trackingInfo||""} onChange={function(e){updateRow(sid,cat.key,"trackingInfo",e.target.value);}} placeholder="Tracking, install notes..." disabled={row.na} style={iS()} />
-                        <select value={row.status||"Not Started"} onChange={function(e){updateRow(sid,cat.key,"status",e.target.value);}} disabled={row.na} style={{fontSize:12,padding:"5px 10px",borderRadius:10,border:`1px solid ${sc.dot}`,background:sc.bg,color:sc.text,fontWeight:600,outline:"none",width:"100%"}}>
-                          {STATUSES.map(function(s){return <option key={s}>{s}</option>;})}
-                        </select>
-                        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,minWidth:130}}>
-                          <div style={{display:"flex",alignItems:"center",gap:6}}>
-                            <span style={{fontSize:11,color:"#C8C6BE",whiteSpace:"nowrap"}}>ETA</span>
-                            <input type="date" value={row.eta||""} onChange={function(e){updateRow(sid,cat.key,"eta",e.target.value);}} disabled={row.na} style={{fontSize:11,padding:"4px 8px",borderRadius:10,border:`1px solid ${ec?ec.border:PINK_M}`,background:ec?ec.bg:"#FDF5F8",color:ec?ec.text:"#888780",outline:"none",width:120}} />
-                          </div>
-                          {ec && <span style={{fontSize:10,fontWeight:600,color:ec.text,whiteSpace:"nowrap"}}>{ec.label}</span>}
-                        </div>
-                        <button onClick={function(){updateRow(sid,cat.key,"na",!row.na);}} style={{fontSize:11,padding:"5px 12px",borderRadius:99,border:`1.5px solid ${row.na?"#C8C6BE":PINK_M}`,background:row.na?"#F5F4F1":"#fff",color:row.na?"#888780":PINK_D,cursor:"pointer",fontWeight:row.na?600:400,whiteSpace:"nowrap"}}>{row.na?"↩":"N/A"}</button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
-                {CATS.filter(function(c){return !rows[sid]?.[c.key]?.na;}).map(function(c) {
-                  const row = rows[sid]?.[c.key] || blankRow();
-                  return (
-                    <div key={c.key} style={{display:"grid",gridTemplateColumns:"190px 1fr",gap:12,alignItems:"center",padding:"0 20px"}}>
-                      <span style={{fontSize:12,color:PINK_D,fontWeight:600}}>{c.label} notes</span>
-                      <input value={row.notes||""} onChange={function(e){updateRow(sid,c.key,"notes",e.target.value);}} placeholder="Add a note..." style={{fontSize:12,padding:"6px 12px",borderRadius:10,border:`1px solid ${PINK_M}`,background:"#fff",outline:"none",color:"#444441"}} />
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div style={{background:"#fff",borderRadius:20,border:`1px solid ${PINK_M}`,padding:"20px 24px"}}>
-                <div style={{fontSize:13,fontWeight:600,color:PINK_D,marginBottom:10}}>Additional Notes</div>
-                <textarea value={notes[sid]||""} onChange={function(e){updateNotes(sid,e.target.value);}} placeholder="Permits, GC notes, flagged items, open questions..." rows={5} style={{width:"100%",fontSize:13,padding:"10px 14px",borderRadius:12,border:`1px solid ${PINK_M}`,background:"#FDF5F8",outline:"none",color:"#444441",resize:"vertical",lineHeight:1.6}} />
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ALL STORES */}
-      {view === "master" && (
-        <div style={{maxWidth:1100,margin:"0 auto",padding:"24px 20px"}}>
-          <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
-            {fBtns.map(function([val,label]) {
-              return <button key={val} onClick={function(){setFilter(val);}} style={{fontSize:12,padding:"5px 14px",borderRadius:99,border:`1.5px solid ${filter===val?PINK:PINK_M}`,background:filter===val?PINK:"#fff",color:filter===val?"#fff":PINK_D,cursor:"pointer",fontWeight:filter===val?600:400}}>{label}</button>;
-            })}
-          </div>
-          {filtStores.length === 0 ? <EmptyState /> : (
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
-              {filtStores.map(function(s) {
-                const sid2 = storeKey(s);
-                const d = daysUntil(s.ho);
-                const u = urgLabel(d);
-                const ac2 = getActiveCats(rows, sid2);
-                const dc2 = getDoneCats(rows, sid2);
-                const pct = ac2.length ? Math.round((dc2.length/ac2.length)*100) : 0;
-                const comp = isComplete(rows, sid2);
-                const score = comp ? storeScore(s, rows) : null;
-                return (
-                  <div key={sid2} onClick={function(){setActiveStore(sid2);setFilter(comp?"complete":s.type==="refurb"?"refurb":getStoreStatus(s,rows)==="active"?"active":"upcoming");setView("site");}} style={{background:"#fff",borderRadius:18,border:`1px solid ${comp?"#1D9E75":PINK_M}`,padding:"18px 20px",cursor:"pointer",transition:"transform 0.1s"}} onMouseEnter={function(e){e.currentTarget.style.transform="scale(1.01)";}} onMouseLeave={function(e){e.currentTarget.style.transform="scale(1)";}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8,gap:8}}>
-                      <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                        <div style={{fontSize:14,fontWeight:700,color:PINK_D}}>{s.name}</div>
-                        {s.type === "refurb" && <RefurbBadge />}
-                      </div>
-                      {comp && score ? <ScoreRing pct={score.onTimePct != null ? score.onTimePct : score.completionPct} /> : <Pill label={u} cfg={URG_CFG[u]} />}
-                    </div>
-                    <div style={{fontSize:12,color:"#888780",marginBottom:12}}>{s.cm} · {s.region} · {fmtDate(s.op||s.ho)}</div>
-                    <div style={{background:PINK_L,borderRadius:99,height:6,marginBottom:6}}>
-                      <div style={{background:comp?"#1D9E75":PINK,borderRadius:99,height:6,width:`${pct}%`}}></div>
-                    </div>
-                    <div style={{fontSize:12,color:"#C8C6BE"}}>{dc2.length} of {ac2.length} complete{ac2.length<CATS.length?` · ${CATS.length-ac2.length} N/A`:""}{ comp?" · ✓":""}</div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* VENDOR */}
-      {view === "vendor" && (
-        <div style={{maxWidth:1100,margin:"0 auto",padding:"24px 20px"}}>
-          <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
-            {fBtns.map(function([val,label]) {
-              return <button key={val} onClick={function(){setFilter(val);}} style={{fontSize:12,padding:"5px 14px",borderRadius:99,border:`1.5px solid ${filter===val?PINK:PINK_M}`,background:filter===val?PINK:"#fff",color:filter===val?"#fff":PINK_D,cursor:"pointer",fontWeight:filter===val?600:400}}>{label}</button>;
-            })}
-          </div>
-          {[...new Set([...CATS.map(function(c){return c.vendor("East");}), ...CATS.map(function(c){return c.vendor("West");})])].sort().map(function(vendor) {
-            const vrows = [];
-            filtStores.forEach(function(s) {
-              const sid2 = storeKey(s);
-              CATS.forEach(function(c) {
-                const row = rows[sid2]?.[c.key] || blankRow();
-                if (row.na) return;
-                const v = row.vendorOverride || c.vendor(s.region);
-                if (v === vendor) vrows.push({store:s, cat:c, row, days:daysUntil(s.ho), sid2});
-              });
-            });
-            if (!vrows.length) return null;
-            const open = vrows.filter(function(r){return !DONE_S.includes(r.row.status);}).length;
-            return (
-              <div key={vendor} style={{background:"#fff",borderRadius:20,border:`1px solid ${PINK_M}`,marginBottom:16,overflow:"hidden"}}>
-                <div style={{padding:"14px 20px",borderBottom:`1px solid ${PINK_M}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                  <span style={{fontSize:15,fontWeight:700,color:PINK_D}}>{vendor}</span>
-                  <div style={{display:"flex",gap:8}}>
-                    <span style={{fontSize:12,color:"#C8C6BE"}}>{vrows.length} items</span>
-                    {open > 0 && <span style={{fontSize:12,padding:"2px 10px",borderRadius:99,background:"#FEF4E6",color:"#854F0B",fontWeight:500}}>{open} open</span>}
-                  </div>
-                </div>
-                <div style={{padding:"8px 0"}}>
-                  {vrows.map(function({store,cat,row,days,sid2}) {
-                    const sc2 = STATUS_CFG[row.status] || STATUS_CFG["Not Started"];
-                    const u2 = urgLabel(days);
-                    return (
-                      <div key={`${sid2}-${cat.key}`} style={{display:"grid",gridTemplateColumns:"200px 130px 1fr 150px 110px",gap:10,alignItems:"center",padding:"10px 20px",borderBottom:`1px solid #FDF5F8`}}>
-                        <div>
-                          <div style={{display:"flex",alignItems:"center",gap:6}}>
-                            <span style={{fontSize:13,fontWeight:600,color:PINK_D}}>{store.name}</span>
-                            {store.type === "refurb" && <span style={{fontSize:10,padding:"1px 6px",borderRadius:99,background:"#EBF3FC",color:"#185FA5"}}>R</span>}
-                          </div>
-                          <div style={{fontSize:11,color:"#C8C6BE"}}>{cat.label}</div>
-                        </div>
-                        <input value={row.trackingInfo||""} onChange={function(e){updateRow(sid2,cat.key,"trackingInfo",e.target.value);}} placeholder="ETA..." style={{fontSize:12,padding:"5px 10px",borderRadius:10,border:`1px solid ${PINK_M}`,background:"#FDF5F8",outline:"none",color:"#444441",width:"100%"}} />
-                        <input value={row.notes||""} onChange={function(e){updateRow(sid2,cat.key,"notes",e.target.value);}} placeholder="Notes..." style={{fontSize:12,padding:"5px 10px",borderRadius:10,border:`1px solid ${PINK_M}`,background:"#FDF5F8",outline:"none",color:"#444441",width:"100%"}} />
-                        <select value={row.status||"Not Started"} onChange={function(e){updateRow(sid2,cat.key,"status",e.target.value);}} style={{fontSize:12,padding:"5px 8px",borderRadius:10,border:`1px solid ${sc2.dot}`,background:sc2.bg,color:sc2.text,fontWeight:600,outline:"none",width:"100%"}}>
-                          {STATUSES.map(function(s){return <option key={s}>{s}</option>;})}
-                        </select>
-                        <Pill label={u2} cfg={URG_CFG[u2]} />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* PIPELINE */}
-      {view === "pipeline" && (
-        <div style={{maxWidth:1200,margin:"0 auto",padding:"24px 20px"}}>
-          <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
-            <span style={{fontSize:12,color:"#C8C6BE",fontWeight:500}}>Filter</span>
-            <div style={{position:"relative",display:"flex",alignItems:"center"}}>
-              <span style={{position:"absolute",left:10,fontSize:13,color:"#C8C6BE"}}>🔍</span>
-              <input value={plSearch} onChange={function(e){setPlSearch(e.target.value);}} placeholder="Search store, ID, CM..." style={{fontSize:12,padding:"5px 12px 5px 30px",borderRadius:99,border:`1px solid ${PINK_M}`,background:"#fff",color:"#444441",outline:"none",width:210}} />
-              {plSearch && <button onClick={function(){setPlSearch("");}} style={{position:"absolute",right:8,fontSize:12,color:"#C8C6BE",background:"none",border:"none",cursor:"pointer"}}>✕</button>}
-            </div>
-            {[["region",["All","East","West"]],["cm",["All",...allCMs]],["type",[["All","All Types"],["new","New Build"],["refurb","Refurb"]]],["status",[["All","All Status"],["active","Active"],["refurb","Active Refurb"],["upcoming","Upcoming"],["complete","Complete"]]]].map(function([key, opts]) {
-              return (
-                <select key={key} value={plFilter[key]} onChange={function(e){setPlFilter(function(p){return Object.assign({},p,{[key]:e.target.value});});}} style={{fontSize:12,padding:"5px 12px",borderRadius:99,border:`1px solid ${PINK_M}`,background:"#fff",color:PINK_D,outline:"none",cursor:"pointer"}}>
-                  {opts.map(function(o){return Array.isArray(o) ? <option key={o[0]} value={o[0]}>{o[1]}</option> : <option key={o}>{o}</option>;})}
-                </select>
-              );
-            })}
-            <span style={{fontSize:12,color:"#C8C6BE"}}>{plStores.length} stores</span>
-            <button onClick={function(){setShowAdd(true);}} style={{marginLeft:"auto",fontSize:12,padding:"6px 16px",borderRadius:99,border:"none",background:PINK,color:"#fff",cursor:"pointer",fontWeight:600}}>+ Add Store</button>
-          </div>
-          <div style={{background:"#fff",borderRadius:20,border:`1px solid ${PINK_M}`,overflow:"hidden"}}>
-            <div style={{overflowX:"auto"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-                <thead>
-                  <tr>
-                    {[["name","Store Name"],["id","Store ID"],["type","Type"],["region","Region"],["cm","CM"],["cs","Construction Start"],["ho","Handover"],["op","Store Open"],["status","Status"]].map(function([col,label]) {
-                      return <th key={col} style={thS} onClick={col!=="status"?function(){toggleSort(col);}:undefined}>{label}{col!=="status"&&<span style={{color:plSort.col===col?PINK:"#C8C6BE",marginLeft:4}}>{plSort.col===col?(plSort.dir==="asc"?"↑":"↓"):"↕"}</span>}</th>;
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {plStores.map(function(s, i) {
-                    const sid2 = storeKey(s);
-                    const st = getStoreStatus(s, rows);
-                    const slc = STAT_LBL[st];
-                    return (
-                      <tr key={sid2} style={{background:i%2===0?"#fff":"#FDF5F8"}}>
-                        <td style={Object.assign({},tdS,{fontWeight:700,color:PINK_D,minWidth:180})}><input value={s.name} onChange={function(e){updateStore(sid2,"name",e.target.value);}} style={{fontSize:12,fontWeight:700,color:PINK_D,border:"none",background:"transparent",outline:"none",width:"100%",padding:"2px 0"}} /></td>
-                        <td style={Object.assign({},tdS,{minWidth:80})}><input value={s.id||""} onChange={function(e){updateStore(sid2,"id",e.target.value);}} style={{fontSize:12,color:"#444441",border:"none",background:"transparent",outline:"none",width:70,padding:"2px 0"}} /></td>
-                        <td style={Object.assign({},tdS,{minWidth:90})}><select value={s.type} onChange={function(e){updateStore(sid2,"type",e.target.value);}} style={{fontSize:11,padding:"2px 6px",borderRadius:8,border:`1px solid ${PINK_M}`,background:s.type==="refurb"?"#EBF3FC":"#EDF6E1",color:s.type==="refurb"?"#185FA5":"#3B6D11",outline:"none"}}><option value="new">New</option><option value="refurb">Refurb</option></select></td>
-                        <td style={Object.assign({},tdS,{minWidth:80})}><select value={s.region||"East"} onChange={function(e){updateStore(sid2,"region",e.target.value);}} style={{fontSize:11,padding:"2px 6px",borderRadius:8,border:`1px solid ${PINK_M}`,background:"#FDF5F8",outline:"none"}}><option>East</option><option>West</option></select></td>
-                        <td style={Object.assign({},tdS,{minWidth:150})}><input value={s.cm||""} onChange={function(e){updateStore(sid2,"cm",e.target.value);}} style={{fontSize:12,border:"none",background:"transparent",outline:"none",width:"100%",padding:"2px 0",color:"#444441"}} /></td>
-                        <td style={Object.assign({},tdS,{minWidth:130})}><input type="date" value={s.cs||""} onChange={function(e){updateStore(sid2,"cs",e.target.value);}} style={{fontSize:11,padding:"3px 6px",borderRadius:8,border:`1px solid ${PINK_M}`,background:"#FDF5F8",outline:"none"}} /></td>
-                        <td style={Object.assign({},tdS,{minWidth:130})}><input type="date" value={s.ho||""} onChange={function(e){updateStore(sid2,"ho",e.target.value);}} style={{fontSize:11,padding:"3px 6px",borderRadius:8,border:`1px solid ${PINK_M}`,background:"#FDF5F8",outline:"none"}} /></td>
-                        <td style={Object.assign({},tdS,{minWidth:130})}><input type="date" value={s.op||""} onChange={function(e){updateStore(sid2,"op",e.target.value);}} style={{fontSize:11,padding:"3px 6px",borderRadius:8,border:`1px solid ${PINK_M}`,background:"#FDF5F8",outline:"none"}} /></td>
-                        <td style={Object.assign({},tdS,{minWidth:110})}><span style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:slc.bg,color:slc.text,whiteSpace:"nowrap"}}>{slc.label}</span></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* DASHBOARD */}
-      {view === "dashboard" && (
-        <div style={{maxWidth:1100,margin:"0 auto",padding:"24px 20px"}}>
-          <div style={{display:"flex",gap:8,marginBottom:24,flexWrap:"wrap",alignItems:"center"}}>
-            <span style={{fontSize:12,color:"#C8C6BE",fontWeight:500}}>Filter</span>
-            <select value={dashRegion} onChange={function(e){setDashRegion(e.target.value);}} style={{fontSize:12,padding:"5px 12px",borderRadius:99,border:`1px solid ${PINK_M}`,background:"#fff",color:PINK_D,outline:"none"}}>{["All","East","West"].map(function(o){return <option key={o}>{o}</option>;})}</select>
-            <select value={dashCM} onChange={function(e){setDashCM(e.target.value);}} style={{fontSize:12,padding:"5px 12px",borderRadius:99,border:`1px solid ${PINK_M}`,background:"#fff",color:PINK_D,outline:"none"}}>{["All",...allCMs].map(function(o){return <option key={o}>{o}</option>;})}</select>
-            <button onClick={function(){window.print();}} style={{marginLeft:"auto",fontSize:12,padding:"5px 16px",borderRadius:99,border:`1.5px solid ${PINK_M}`,background:"#fff",color:PINK_D,cursor:"pointer"}}>🖨 Print / Export PDF</button>
-          </div>
-          <div style={{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap"}}>
-            <StatCard label="Total Pipeline" value={dashMetrics.total} sub="stores tracked" />
-            <StatCard label="Opening This Month" value={dashMetrics.otm} sub="store openings" color={dashMetrics.otm>0?"#854F0B":PINK_D} />
-            <StatCard label="Items At Risk" value={dashMetrics.ar} sub="delayed or overdue" color={dashMetrics.ar>0?"#A32D2D":"#0F6E56"} />
-            <StatCard label="On-Time Rate" value={dashMetrics.otr!==null?`${dashMetrics.otr}%`:"—"} sub={dashMetrics.otr!==null?`based on ${dashMetrics.we} ETAs set`:"no ETAs set yet"} color={dashMetrics.otr===null?"#C8C6BE":dashMetrics.otr>=80?"#0F6E56":dashMetrics.otr>=60?"#854F0B":"#A32D2D"} />
-          </div>
-
-          <div style={{background:"#fff",borderRadius:20,border:`1px solid ${PINK_M}`,padding:"20px 24px",marginBottom:16}}>
-            <div style={{fontSize:14,fontWeight:700,color:PINK_D,marginBottom:16}}>Store Opening Confidence</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:10}}>
-              {dashStores.map(function(s) {
-                const conf = storeConfidence(s, rows);
-                const cfg = CONF_CFG[conf];
-                const sid2 = storeKey(s);
-                const ac2 = getActiveCats(rows, sid2);
-                const dc2 = getDoneCats(rows, sid2);
-                const pct = ac2.length ? Math.round((dc2.length/ac2.length)*100) : 0;
-                const d = daysUntil(s.ho);
-                return (
-                  <div key={sid2} onClick={function(){setActiveStore(sid2);setView("site");setFilter(s.type==="refurb"?"refurb":"active");}} style={{background:cfg.bg,borderRadius:14,padding:"14px 16px",cursor:"pointer",border:`1px solid ${cfg.dot}20`}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-                      <div style={{fontSize:13,fontWeight:700,color:PINK_D,lineHeight:1.3,flex:1,marginRight:8}}>{s.name}</div>
-                      <span style={{fontSize:11,fontWeight:700,color:cfg.text,background:"#fff",padding:"2px 8px",borderRadius:99,whiteSpace:"nowrap"}}>{cfg.label}</span>
-                    </div>
-                    {s.type === "refurb" && <div style={{marginBottom:4}}><RefurbBadge /></div>}
-                    <div style={{fontSize:11,color:"#888780",marginBottom:8}}>{fmtDate(s.op||s.ho)} · {d!==null?`${d}d out`:"TBD"}</div>
-                    <div style={{background:"rgba(255,255,255,0.6)",borderRadius:99,height:5,marginBottom:4}}>
-                      <div style={{background:cfg.dot,borderRadius:99,height:5,width:`${pct}%`}}></div>
-                    </div>
-                    <div style={{fontSize:11,color:"#888780"}}>{dc2.length}/{ac2.length} complete</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div style={{background:"#fff",borderRadius:20,border:`1px solid ${PINK_M}`,padding:"20px 24px",marginBottom:16}}>
-            <div style={{fontSize:14,fontWeight:700,color:PINK_D,marginBottom:16}}>Vendor Health — Active Stores</div>
-            <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {Object.entries(dashMetrics.vl).sort(function(a,b){return b[1].total-a[1].total;}).map(function([vendor,data]) {
-                const otp = data.withEta > 0 ? Math.round((data.onTime/data.withEta)*100) : null;
-                return (
-                  <div key={vendor} style={{display:"grid",gridTemplateColumns:"200px 1fr 80px 120px",gap:12,alignItems:"center",padding:"10px 14px",background:"#FDF5F8",borderRadius:12}}>
-                    <div style={{fontSize:13,fontWeight:600,color:PINK_D}}>{vendor}</div>
-                    <div style={{display:"flex",alignItems:"center",gap:8}}>
-                      <div style={{background:PINK_M,borderRadius:99,height:6,flex:1}}>
-                        <div style={{background:data.done===data.total?"#1D9E75":PINK,borderRadius:99,height:6,width:`${Math.round((data.done/data.total)*100)}%`}}></div>
-                      </div>
-                      <span style={{fontSize:11,color:"#888780",whiteSpace:"nowrap"}}>{data.done}/{data.total}</span>
-                    </div>
-                    {data.atRisk > 0 ? <span style={{fontSize:11,fontWeight:600,padding:"3px 8px",borderRadius:99,background:"#FCEDED",color:"#A32D2D",textAlign:"center"}}>{data.atRisk} at risk</span> : <span style={{fontSize:11,color:"#C8C6BE",textAlign:"center"}}>—</span>}
-                    <span style={{fontSize:12,fontWeight:600,color:otp===null?"#C8C6BE":otp>=80?"#0F6E56":otp>=60?"#854F0B":"#A32D2D",textAlign:"right"}}>{otp!==null?`${otp}% on time`:"No ETAs yet"}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {categorized.complete.length > 0 && (
-            <div style={{background:"#fff",borderRadius:20,border:`1px solid #1D9E75`,padding:"20px 24px",marginBottom:16}}>
-              <div style={{fontSize:14,fontWeight:700,color:PINK_D,marginBottom:16}}>Completed Stores 🎉</div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12}}>
-                {categorized.complete.map(function(s) {
-                  const score = storeScore(s, rows);
-                  return (
-                    <div key={storeKey(s)} onClick={function(){setActiveStore(storeKey(s));setFilter("complete");setView("site");}} style={{background:"#F5FBF8",borderRadius:14,padding:"16px",border:"1px solid #B8E8D4",cursor:"pointer"}} onMouseEnter={function(e){e.currentTarget.style.transform="scale(1.01)";}} onMouseLeave={function(e){e.currentTarget.style.transform="scale(1)";}}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                        <div style={{fontSize:13,fontWeight:700,color:PINK_D}}>{s.name}</div>
-                        {score && <ScoreRing pct={score.onTimePct!=null?score.onTimePct:score.completionPct} />}
-                      </div>
-                      <div style={{fontSize:11,color:"#888780",marginBottom:4}}>{s.cm} · Opened {fmtDate(s.op||s.ho)}</div>
-                      {score && <div style={{fontSize:11,color:"#0F6E56",fontWeight:500}}>{score.done}/{score.total} items · {score.onTimePct!=null?`${score.onTimePct}% on time`:"No ETA data"}</div>}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          <div style={{background:"#fff",borderRadius:20,border:`1px solid ${PINK_M}`,padding:"20px 24px"}}>
-            <div style={{fontSize:14,fontWeight:700,color:PINK_D,marginBottom:16}}>Pipeline — Stores Opening by Month</div>
-            <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
-              {Object.entries(dashMetrics.bm).sort(function(a,b){return new Date("1 "+a[0])-new Date("1 "+b[0]);}).map(function([month,count]) {
-                const today = new Date();
-                const isNow = month === fmtMonth(today.toISOString().split("T")[0]);
-                return (
-                  <div key={month} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
-                    <div style={{width:36,background:isNow?PINK:PINK_M,borderRadius:"6px 6px 0 0",height:Math.max(20,count*18),display:"flex",alignItems:"center",justifyContent:"center"}}>
-                      <span style={{fontSize:11,fontWeight:700,color:"#fff"}}>{count}</span>
-                    </div>
-                    <span style={{fontSize:10,color:isNow?PINK:"#888780",fontWeight:isNow?700:400,whiteSpace:"nowrap"}}>{month}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      </div>
-
-      {/* ADD STORE MODAL */}
-      {showAdd && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200}} onClick={function(){setShowAdd(false);}}>
-          <div style={{background:"#fff",borderRadius:24,padding:"28px 32px",width:480,boxShadow:"0 20px 60px rgba(0,0,0,0.15)"}} onClick={function(e){e.stopPropagation();}}>
-            <div style={{fontSize:18,fontWeight:700,color:PINK_D,marginBottom:4}}>Add New Store</div>
-            <div style={{fontSize:13,color:"#888780",marginBottom:20}}>Fill in what you know — everything can be updated later.</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
-              {[["Store Name","name","text",true],["Store ID","id","text",false],["CM","cm","text",false],["Construction Start","cs","date",false],["Handover","ho","date",false],["Store Open","op","date",false]].map(function([label,field,type,req]) {
-                return (
-                  <div key={field} style={field==="name"?{gridColumn:"1/-1"}:{}}>
-                    <div style={{fontSize:11,color:"#C8C6BE",marginBottom:4}}>{label}{req&&<span style={{color:PINK}}> *</span>}</div>
-                    <input type={type} value={newStore[field]||""} onChange={function(e){setNewStore(function(p){return Object.assign({},p,{[field]:e.target.value});});}} style={{width:"100%",fontSize:13,padding:"8px 12px",borderRadius:10,border:`1px solid ${PINK_M}`,outline:"none",background:"#FDF5F8"}} />
-                  </div>
-                );
-              })}
-              <div>
-                <div style={{fontSize:11,color:"#C8C6BE",marginBottom:4}}>Region</div>
-                <select value={newStore.region} onChange={function(e){setNewStore(function(p){return Object.assign({},p,{region:e.target.value});});}} style={{width:"100%",fontSize:13,padding:"8px 12px",borderRadius:10,border:`1px solid ${PINK_M}`,outline:"none",background:"#FDF5F8"}}><option>East</option><option>West</option></select>
-              </div>
-              <div>
-                <div style={{fontSize:11,color:"#C8C6BE",marginBottom:4}}>Type <span style={{color:PINK}}>*</span></div>
-                <select value={newStore.type} onChange={function(e){setNewStore(function(p){return Object.assign({},p,{type:e.target.value});});}} style={{width:"100%",fontSize:13,padding:"8px 12px",borderRadius:10,border:`1px solid ${PINK_M}`,outline:"none",background:"#FDF5F8"}}><option value="new">New Build</option><option value="refurb">Refurb</option></select>
-              </div>
-            </div>
-            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
-              <button onClick={function(){setShowAdd(false);}} style={{fontSize:13,padding:"8px 18px",borderRadius:99,border:`1px solid ${PINK_M}`,background:"#fff",color:PINK_D,cursor:"pointer"}}>Cancel</button>
-              <button onClick={addStoreHandler} disabled={!newStore.name.trim()} style={{fontSize:13,padding:"8px 20px",borderRadius:99,border:"none",background:newStore.name.trim()?PINK:"#F4C0D1",color:"#fff",cursor:newStore.name.trim()?"pointer":"default",fontWeight:600}}>Add Store</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-    </div>
+  // NAV
+  var nav = e("div",{style:{background:"#fff",borderBottom:"1px solid "+PM,padding:"0 20px",display:"flex",alignItems:"center",justifyContent:"space-between",height:56,position:"sticky",top:0,zIndex:50}},
+    e("div",{style:{display:"flex",alignItems:"center",gap:10}},
+      e("div",{style:{width:28,height:28,borderRadius:8,background:PINK,display:"flex",alignItems:"center",justifyContent:"center"}}, e("span",{style:{color:"#fff",fontSize:14,fontWeight:700}},"J")),
+      e("span",{style:{fontSize:14,fontWeight:600,color:PD}},"FF&E Tracker")
+    ),
+    e("div",{style:{display:"flex",alignItems:"center",gap:6}},
+      saveMsg ? e("span",{style:{fontSize:12,color:"#1D9E75",background:"#E2F5EE",padding:"3px 10px",borderRadius:99}},saveMsg) : null,
+      [["site","By Store"],["master","All Stores"],["vendor","By Vendor"],["pipeline","Pipeline"],["dashboard","Dashboard"]].map(function(pair){
+        return e("button",{key:pair[0],onClick:function(){setView(pair[0]);},style:{fontSize:12,padding:"5px 12px",borderRadius:99,border:"1.5px solid "+(view===pair[0]?PINK:PM),background:view===pair[0]?PINK:"#fff",color:view===pair[0]?"#fff":PD,cursor:"pointer",fontWeight:view===pair[0]?600:400}},pair[1]);
+      })
+    )
   );
+
+  // FILTER BUTTONS
+  function filterBtns(clickFn, activeVal) {
+    return fBtns.map(function(pair){
+      return e("button",{key:pair[0],onClick:function(){clickFn(pair[0]);},style:{fontSize:12,padding:"4px 12px",borderRadius:99,border:"1px solid "+(activeVal===pair[0]?PINK:PM),background:activeVal===pair[0]?PL:"#fff",color:activeVal===pair[0]?PINK:PD,cursor:"pointer",fontWeight:activeVal===pair[0]?600:400}},pair[1]);
+    });
+  }
+
+  var content = null;
+
+  if(view==="site") {
+    var storeSelect = filtStores.length > 0
+      ? e("select",{value:activeStore,onChange:function(ev){setActiveStore(ev.target.value);},style:{fontSize:13,padding:"6px 14px",borderRadius:99,border:"1.5px solid "+PM,color:PD,background:"#fff",fontWeight:600,cursor:"pointer",outline:"none",marginLeft:4}},
+          filtStores.map(function(s){return e("option",{key:sk(s),value:sk(s)},s.name+(s.type==="refurb"?" (Refurb)":"")+(["active","refurb"].indexOf(gss(s,rows))>-1?" ★":""));})
+        )
+      : e("span",{style:{marginLeft:8,fontSize:13,color:"#C8C6BE",fontStyle:"italic"}},filter==="complete"?"No completed stores yet":"No stores here");
+
+    var storeHeader = e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,padding:"20px 24px",marginBottom:16}},
+      e("div",{style:{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:12}},
+        e("div",null,
+          e("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:8,flexWrap:"wrap"}},
+            e("h1",{style:{fontSize:20,fontWeight:700,color:PD}},asd.name),
+            asd.type==="refurb"?e("span",{style:{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:99,background:"#EBF3FC",color:"#185FA5",border:"1px solid #85B7EB"}},"Refurb"):null,
+            e(Pill,{label:urg,cfg:UCFG[urg]})
+          ),
+          e("div",{style:{display:"flex",gap:16,flexWrap:"wrap"}},
+            [["CM",asd.cm],["Region",asd.region],["Store ID",asd.id||"—"],["Construction Start",fd(asd.cs)],["Handover",fd(asd.ho)],["Store Open",fd(asd.op)]].map(function(pair){
+              return e("div",{key:pair[0]},e("div",{style:{fontSize:11,color:"#C8C6BE",fontWeight:500,marginBottom:1}},pair[0]),e("div",{style:{fontSize:13,fontWeight:600,color:PD}},pair[1]));
+            }),
+            days!==null?e("div",null,e("div",{style:{fontSize:11,color:"#C8C6BE",fontWeight:500,marginBottom:1}},"Days Out"),e("div",{style:{fontSize:13,fontWeight:700,color:days<=7?"#A32D2D":days<=21?"#854F0B":PD}},days+"d")):null
+          )
+        ),
+        e("div",{style:{display:"flex",alignItems:"center",gap:12}},
+          isc(rows,sid)?e("div",{style:{background:"#E2F5EE",borderRadius:99,padding:"4px 12px"}},e("span",{style:{fontSize:12,fontWeight:600,color:"#0F6E56"}},"✓ Complete")):null,
+          e("div",{style:{textAlign:"center"}},
+            e("div",{style:{fontSize:22,fontWeight:700,color:dCats.length===aCats.length&&aCats.length>0?"#0F6E56":PINK}},dCats.length+"/"+aCats.length),
+            e("div",{style:{fontSize:11,color:"#C8C6BE"}},"complete")
+          ),
+          e("button",{onClick:function(){setEditing(!editing);},style:{fontSize:12,padding:"6px 14px",borderRadius:99,border:"1px solid "+PM,background:editing?PINK:"#fff",color:editing?"#fff":PD,cursor:"pointer"}},editing?"Done":"Edit Details")
+        )
+      ),
+      editing?e("div",{style:{marginTop:16,paddingTop:16,borderTop:"1px solid "+PM,display:"flex",gap:12,flexWrap:"wrap"}},
+        [["Construction Start","cs","date"],["Handover","ho","date"],["Store Open","op","date"],["CM","cm","text"],["Store ID","id","text"],["Region","region","text"]].map(function(t){
+          return e("div",{key:t[1]},e("div",{style:{fontSize:11,color:"#C8C6BE",marginBottom:4}},t[0]),e("input",{type:t[2],value:asd[t[1]]||"",onChange:function(ev){updStore(sid,t[1],ev.target.value);},style:{fontSize:13,padding:"6px 12px",borderRadius:10,border:"1px solid "+PM,outline:"none",background:"#FDF5F8",width:t[1]==="id"||t[1]==="region"?100:160}}));
+        })
+      ):null
+    );
+
+    var lineItems = e("div",{style:{display:"flex",flexDirection:"column",gap:10,marginBottom:16}},
+      CATS.map(function(cat2){
+        var row=(rows[sid]&&rows[sid][cat2.key])||blankRow();
+        var sc=SCFG[row.status]||SCFG["Not Started"];
+        var vendor=row.vendorOverride||cat2.vendor(asd.region);
+        var risk=DONE_S.indexOf(row.status)>-1?null:er(row.eta,asd.ho);
+        var ec=risk?ECFG[risk]:null;
+        return e("div",{key:cat2.key,style:{background:row.na?"#F9F9F9":"#fff",borderRadius:16,border:"1px solid "+(row.na?"#E8E6DF":PM),padding:"14px 20px",opacity:row.na?0.5:1}},
+          e("div",{style:{display:"grid",gridTemplateColumns:"170px 140px 90px 1fr 110px auto auto",gap:10,alignItems:"center"}},
+            e("div",{style:{display:"flex",alignItems:"center",gap:8}},e("span",{style:{fontSize:16}},cat2.emoji),e("span",{style:{fontSize:14,fontWeight:600,color:row.na?"#C8C6BE":PD}},cat2.label)),
+            e("input",{value:vendor,onChange:function(ev){updRow(sid,cat2.key,"vendorOverride",ev.target.value);},disabled:row.na,style:iS({border:"1px solid "+(row.vendorOverride?"#EF9F27":PM),background:row.vendorOverride?"#FEF4E6":"#FDF5F8",color:row.vendorOverride?"#854F0B":"#5F5E5A"})}),
+            e("select",{value:row.actionOwner||"J&TJ",onChange:function(ev){updRow(sid,cat2.key,"actionOwner",ev.target.value);},disabled:row.na,style:iS()},["J&TJ","Vendor","CM"].map(function(o){return e("option",{key:o},o);})),
+            e("input",{value:row.trackingInfo||"",onChange:function(ev){updRow(sid,cat2.key,"trackingInfo",ev.target.value);},placeholder:"Tracking, install notes...",disabled:row.na,style:iS()}),
+            e("select",{value:row.status||"Not Started",onChange:function(ev){updRow(sid,cat2.key,"status",ev.target.value);},disabled:row.na,style:{fontSize:12,padding:"5px 10px",borderRadius:10,border:"1px solid "+sc.dot,background:sc.bg,color:sc.text,fontWeight:600,outline:"none",width:"100%"}},STATUSES.map(function(s){return e("option",{key:s},s);})),
+            e("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",gap:3,minWidth:130}},
+              e("div",{style:{display:"flex",alignItems:"center",gap:6}},
+                e("span",{style:{fontSize:11,color:"#C8C6BE",whiteSpace:"nowrap"}},"ETA"),
+                e("input",{type:"date",value:row.eta||"",onChange:function(ev){updRow(sid,cat2.key,"eta",ev.target.value);},disabled:row.na,style:{fontSize:11,padding:"4px 8px",borderRadius:10,border:"1px solid "+(ec?ec.border:PM),background:ec?ec.bg:"#FDF5F8",color:ec?ec.text:"#888780",outline:"none",width:120}})
+              ),
+              ec?e("span",{style:{fontSize:10,fontWeight:600,color:ec.text,whiteSpace:"nowrap"}},ec.label):null
+            ),
+            e("button",{onClick:function(){updRow(sid,cat2.key,"na",!row.na);},style:{fontSize:11,padding:"5px 12px",borderRadius:99,border:"1.5px solid "+(row.na?"#C8C6BE":PM),background:row.na?"#F5F4F1":"#fff",color:row.na?"#888780":PD,cursor:"pointer",fontWeight:row.na?600:400,whiteSpace:"nowrap"}},row.na?"↩":"N/A")
+          )
+        );
+      })
+    );
+
+    var itemNotes = e("div",{style:{display:"flex",flexDirection:"column",gap:6,marginBottom:16}},
+      CATS.filter(function(c){return!rows[sid]||!rows[sid][c.key]||!rows[sid][c.key].na;}).map(function(c){
+        var row=(rows[sid]&&rows[sid][c.key])||blankRow();
+        return e("div",{key:c.key,style:{display:"grid",gridTemplateColumns:"190px 1fr",gap:12,alignItems:"center",padding:"0 20px"}},
+          e("span",{style:{fontSize:12,color:PD,fontWeight:600}},c.label+" notes"),
+          e("input",{value:row.notes||"",onChange:function(ev){updRow(sid,c.key,"notes",ev.target.value);},placeholder:"Add a note...",style:{fontSize:12,padding:"6px 12px",borderRadius:10,border:"1px solid "+PM,background:"#fff",outline:"none",color:"#444441"}})
+        );
+      })
+    );
+
+    var addlNotesBox = e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,padding:"20px 24px"}},
+      e("div",{style:{fontSize:13,fontWeight:600,color:PD,marginBottom:10}},"Additional Notes"),
+      e("textarea",{value:notes[sid]||"",onChange:function(ev){updNotes(sid,ev.target.value);},placeholder:"Permits, GC notes, flagged items...",rows:5,style:{width:"100%",fontSize:13,padding:"10px 14px",borderRadius:12,border:"1px solid "+PM,background:"#FDF5F8",outline:"none",color:"#444441",resize:"vertical",lineHeight:1.6}})
+    );
+
+    var emptyComplete = e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,padding:"60px 24px",textAlign:"center"}},
+      e("div",{style:{fontSize:40,marginBottom:16}},"🎉"),
+      e("div",{style:{fontSize:18,fontWeight:700,color:PD,marginBottom:8}},"No completed stores yet"),
+      e("div",{style:{fontSize:14,color:"#888780",maxWidth:400,margin:"0 auto"}},"Stores appear here automatically when all FF&E items are marked done.")
+    );
+
+    content = e("div",{style:{maxWidth:1100,margin:"0 auto",padding:"24px 20px"}},
+      e("div",{style:{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap",alignItems:"center"}},
+        e("span",{style:{fontSize:12,color:"#C8C6BE",fontWeight:500}},"Store"),
+        filterBtns(filterClick, filter),
+        storeSelect
+      ),
+      filter==="complete"&&cat.complete.length===0 ? emptyComplete : (asd ? e(React.Fragment,null, storeHeader, lineItems, itemNotes, addlNotesBox) : null)
+    );
+  }
+
+  if(view==="master") {
+    var emptyComplete2 = e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,padding:"60px 24px",textAlign:"center"}},e("div",{style:{fontSize:40,marginBottom:16}},"🎉"),e("div",{style:{fontSize:18,fontWeight:700,color:PD,marginBottom:8}},"No completed stores yet"),e("div",{style:{fontSize:14,color:"#888780"}},"Stores move here automatically when all FF&E items are done."));
+    content = e("div",{style:{maxWidth:1100,margin:"0 auto",padding:"24px 20px"}},
+      e("div",{style:{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}, filterBtns(function(v){setFilter(v);}, filter)),
+      filtStores.length===0 ? emptyComplete2 :
+      e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}},
+        filtStores.map(function(s){
+          var sid2=sk(s),d=du(s.ho),u=ul(d),ac2=gac(rows,sid2),dc2=gdc(rows,sid2),pct=ac2.length?Math.round((dc2.length/ac2.length)*100):0,comp=isc(rows,sid2),score=comp?ss(s,rows):null;
+          return e("div",{key:sid2,onClick:function(){setActiveStore(sid2);setFilter(comp?"complete":s.type==="refurb"?"refurb":gss(s,rows)==="active"?"active":"upcoming");setView("site");},style:{background:"#fff",borderRadius:18,border:"1px solid "+(comp?"#1D9E75":PM),padding:"18px 20px",cursor:"pointer"}},
+            e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8,gap:8}},
+              e("div",null,e("div",{style:{fontSize:14,fontWeight:700,color:PD}},s.name),s.type==="refurb"?e("span",{style:{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:99,background:"#EBF3FC",color:"#185FA5",border:"1px solid #85B7EB"}},"Refurb"):null),
+              e(Pill,{label:u,cfg:UCFG[u]})
+            ),
+            e("div",{style:{fontSize:12,color:"#888780",marginBottom:12}},s.cm+" · "+s.region+" · "+fd(s.op||s.ho)),
+            e("div",{style:{background:PL,borderRadius:99,height:6,marginBottom:6}},e("div",{style:{background:comp?"#1D9E75":PINK,borderRadius:99,height:6,width:pct+"%"}})),
+            e("div",{style:{fontSize:12,color:"#C8C6BE"}},dc2.length+" of "+ac2.length+" complete"+(ac2.length<CATS.length?" · "+(CATS.length-ac2.length)+" N/A":"")+(comp?" · ✓":""))
+          );
+        })
+      )
+    );
+  }
+
+  if(view==="vendor") {
+    var vendors=[...new Set(CATS.map(function(c){return c.vendor("East");}).concat(CATS.map(function(c){return c.vendor("West");})))].sort();
+    content = e("div",{style:{maxWidth:1100,margin:"0 auto",padding:"24px 20px"}},
+      e("div",{style:{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}, filterBtns(function(v){setFilter(v);}, filter)),
+      vendors.map(function(vendor){
+        var vrows=[];
+        filtStores.forEach(function(s){var sid2=sk(s);CATS.forEach(function(c){var row=(rows[sid2]&&rows[sid2][c.key])||blankRow();if(row.na)return;var v=row.vendorOverride||c.vendor(s.region);if(v===vendor)vrows.push({store:s,cat:c,row:row,days:du(s.ho),sid2:sid2});});});
+        if(!vrows.length)return null;
+        var open=vrows.filter(function(r){return DONE_S.indexOf(r.row.status)===-1;}).length;
+        return e("div",{key:vendor,style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,marginBottom:16,overflow:"hidden"}},
+          e("div",{style:{padding:"14px 20px",borderBottom:"1px solid "+PM,display:"flex",alignItems:"center",justifyContent:"space-between"}},
+            e("span",{style:{fontSize:15,fontWeight:700,color:PD}},vendor),
+            e("div",{style:{display:"flex",gap:8}},e("span",{style:{fontSize:12,color:"#C8C6BE"}},vrows.length+" items"),open>0?e("span",{style:{fontSize:12,padding:"2px 10px",borderRadius:99,background:"#FEF4E6",color:"#854F0B",fontWeight:500}},open+" open"):null)
+          ),
+          e("div",{style:{padding:"8px 0"}},
+            vrows.map(function(vr){
+              var sc2=SCFG[vr.row.status]||SCFG["Not Started"],u2=ul(vr.days);
+              return e("div",{key:vr.sid2+"-"+vr.cat.key,style:{display:"grid",gridTemplateColumns:"200px 130px 1fr 150px 110px",gap:10,alignItems:"center",padding:"10px 20px",borderBottom:"1px solid #FDF5F8"}},
+                e("div",null,e("div",{style:{display:"flex",alignItems:"center",gap:6}},e("span",{style:{fontSize:13,fontWeight:600,color:PD}},vr.store.name),vr.store.type==="refurb"?e("span",{style:{fontSize:10,padding:"1px 6px",borderRadius:99,background:"#EBF3FC",color:"#185FA5"}},"R"):null),e("div",{style:{fontSize:11,color:"#C8C6BE"}},vr.cat.label)),
+                e("input",{value:vr.row.trackingInfo||"",onChange:function(ev){updRow(vr.sid2,vr.cat.key,"trackingInfo",ev.target.value);},placeholder:"ETA...",style:{fontSize:12,padding:"5px 10px",borderRadius:10,border:"1px solid "+PM,background:"#FDF5F8",outline:"none",color:"#444441",width:"100%"}}),
+                e("input",{value:vr.row.notes||"",onChange:function(ev){updRow(vr.sid2,vr.cat.key,"notes",ev.target.value);},placeholder:"Notes...",style:{fontSize:12,padding:"5px 10px",borderRadius:10,border:"1px solid "+PM,background:"#FDF5F8",outline:"none",color:"#444441",width:"100%"}}),
+                e("select",{value:vr.row.status||"Not Started",onChange:function(ev){updRow(vr.sid2,vr.cat.key,"status",ev.target.value);},style:{fontSize:12,padding:"5px 8px",borderRadius:10,border:"1px solid "+sc2.dot,background:sc2.bg,color:sc2.text,fontWeight:600,outline:"none",width:"100%"}},STATUSES.map(function(s){return e("option",{key:s},s);})),
+                e(Pill,{label:u2,cfg:UCFG[u2]})
+              );
+            })
+          )
+        );
+      })
+    );
+  }
+
+  if(view==="pipeline") {
+    var cols=[["name","Store Name"],["id","Store ID"],["type","Type"],["region","Region"],["cm","CM"],["cs","Construction Start"],["ho","Handover"],["op","Store Open"],["status","Status"]];
+    content = e("div",{style:{maxWidth:1200,margin:"0 auto",padding:"24px 20px"}},
+      e("div",{style:{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap",alignItems:"center"}},
+        e("span",{style:{fontSize:12,color:"#C8C6BE",fontWeight:500}},"Filter"),
+        e("div",{style:{position:"relative",display:"flex",alignItems:"center"}},
+          e("span",{style:{position:"absolute",left:10,fontSize:13,color:"#C8C6BE"}},"🔍"),
+          e("input",{value:plSearch,onChange:function(ev){setPlSearch(ev.target.value);},placeholder:"Search store, ID, CM...",style:{fontSize:12,padding:"5px 12px 5px 30px",borderRadius:99,border:"1px solid "+PM,background:"#fff",color:"#444441",outline:"none",width:210}}),
+          plSearch?e("button",{onClick:function(){setPlSearch("");},style:{position:"absolute",right:8,fontSize:12,color:"#C8C6BE",background:"none",border:"none",cursor:"pointer"}},"✕"):null
+        ),
+        [["region",["All","East","West"]],["cm",["All"].concat(allCMs)],["type",[["All","All Types"],["new","New Build"],["refurb","Refurb"]]],["status",[["All","All Status"],["active","Active"],["refurb","Active Refurb"],["upcoming","Upcoming"],["complete","Complete"]]]].map(function(kv){
+          return e("select",{key:kv[0],value:plFilter[kv[0]],onChange:function(ev){setPlFilter(function(p){return Object.assign({},p,{[kv[0]]:ev.target.value});});},style:{fontSize:12,padding:"5px 12px",borderRadius:99,border:"1px solid "+PM,background:"#fff",color:PD,outline:"none",cursor:"pointer"}},
+            kv[1].map(function(o){return Array.isArray(o)?e("option",{key:o[0],value:o[0]},o[1]):e("option",{key:o},o);})
+          );
+        }),
+        e("span",{style:{fontSize:12,color:"#C8C6BE"}},plStores.length+" stores"),
+        e("button",{onClick:function(){setShowAdd(true);},style:{marginLeft:"auto",fontSize:12,padding:"6px 16px",borderRadius:99,border:"none",background:PINK,color:"#fff",cursor:"pointer",fontWeight:600}},"+ Add Store")
+      ),
+      e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,overflow:"hidden"}},
+        e("div",{style:{overflowX:"auto"}},
+          e("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:12}},
+            e("thead",null,e("tr",null,cols.map(function(col){return e("th",{key:col[0],style:thS,onClick:col[0]!=="status"?function(){setPlSort(function(p){return{col:col[0],dir:p.col===col[0]&&p.dir==="asc"?"desc":"asc"};});}:undefined},col[1],col[0]!=="status"?e("span",{style:{color:plSort.col===col[0]?PINK:"#C8C6BE",marginLeft:4}},plSort.col===col[0]?(plSort.dir==="asc"?"↑":"↓"):"↕"):null);}))),
+            e("tbody",null,plStores.map(function(s,i){
+              var sid2=sk(s),st=gss(s,rows),slc=SLBL[st];
+              return e("tr",{key:sid2,style:{background:i%2===0?"#fff":"#FDF5F8"}},
+                e("td",{style:Object.assign({},tdS,{fontWeight:700,color:PD,minWidth:180})},e("input",{value:s.name,onChange:function(ev){updStore(sid2,"name",ev.target.value);},style:{fontSize:12,fontWeight:700,color:PD,border:"none",background:"transparent",outline:"none",width:"100%",padding:"2px 0"}})),
+                e("td",{style:Object.assign({},tdS,{minWidth:80})},e("input",{value:s.id||"",onChange:function(ev){updStore(sid2,"id",ev.target.value);},style:{fontSize:12,color:"#444441",border:"none",background:"transparent",outline:"none",width:70,padding:"2px 0"}})),
+                e("td",{style:Object.assign({},tdS,{minWidth:90})},e("select",{value:s.type,onChange:function(ev){updStore(sid2,"type",ev.target.value);},style:{fontSize:11,padding:"2px 6px",borderRadius:8,border:"1px solid "+PM,background:s.type==="refurb"?"#EBF3FC":"#EDF6E1",color:s.type==="refurb"?"#185FA5":"#3B6D11",outline:"none"}},e("option",{value:"new"},"New"),e("option",{value:"refurb"},"Refurb"))),
+                e("td",{style:Object.assign({},tdS,{minWidth:80})},e("select",{value:s.region||"East",onChange:function(ev){updStore(sid2,"region",ev.target.value);},style:{fontSize:11,padding:"2px 6px",borderRadius:8,border:"1px solid "+PM,background:"#FDF5F8",outline:"none"}},e("option",null,"East"),e("option",null,"West"))),
+                e("td",{style:Object.assign({},tdS,{minWidth:150})},e("input",{value:s.cm||"",onChange:function(ev){updStore(sid2,"cm",ev.target.value);},style:{fontSize:12,border:"none",background:"transparent",outline:"none",width:"100%",padding:"2px 0",color:"#444441"}})),
+                e("td",{style:Object.assign({},tdS,{minWidth:130})},e("input",{type:"date",value:s.cs||"",onChange:function(ev){updStore(sid2,"cs",ev.target.value);},style:{fontSize:11,padding:"3px 6px",borderRadius:8,border:"1px solid "+PM,background:"#FDF5F8",outline:"none"}})),
+                e("td",{style:Object.assign({},tdS,{minWidth:130})},e("input",{type:"date",value:s.ho||"",onChange:function(ev){updStore(sid2,"ho",ev.target.value);},style:{fontSize:11,padding:"3px 6px",borderRadius:8,border:"1px solid "+PM,background:"#FDF5F8",outline:"none"}})),
+                e("td",{style:Object.assign({},tdS,{minWidth:130})},e("input",{type:"date",value:s.op||"",onChange:function(ev){updStore(sid2,"op",ev.target.value);},style:{fontSize:11,padding:"3px 6px",borderRadius:8,border:"1px solid "+PM,background:"#FDF5F8",outline:"none"}})),
+                e("td",{style:Object.assign({},tdS,{minWidth:110})},e("span",{style:{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:slc.bg,color:slc.text,whiteSpace:"nowrap"}},slc.label))
+              );
+            }))
+          )
+        )
+      )
+    );
+  }
+
+  if(view==="dashboard") {
+    content = e("div",{style:{maxWidth:1100,margin:"0 auto",padding:"24px 20px"}},
+      e("div",{style:{display:"flex",gap:8,marginBottom:24,flexWrap:"wrap",alignItems:"center"}},
+        e("span",{style:{fontSize:12,color:"#C8C6BE",fontWeight:500}},"Filter"),
+        e("select",{value:dashRegion,onChange:function(ev){setDashRegion(ev.target.value);},style:{fontSize:12,padding:"5px 12px",borderRadius:99,border:"1px solid "+PM,background:"#fff",color:PD,outline:"none"}},["All","East","West"].map(function(o){return e("option",{key:o},o);})),
+        e("select",{value:dashCM,onChange:function(ev){setDashCM(ev.target.value);},style:{fontSize:12,padding:"5px 12px",borderRadius:99,border:"1px solid "+PM,background:"#fff",color:PD,outline:"none"}},["All"].concat(allCMs).map(function(o){return e("option",{key:o},o);})),
+        e("button",{onClick:function(){window.print();},style:{marginLeft:"auto",fontSize:12,padding:"5px 16px",borderRadius:99,border:"1.5px solid "+PM,background:"#fff",color:PD,cursor:"pointer"}},"🖨 Print / Export PDF")
+      ),
+      e("div",{style:{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap"}},
+        [["Total Pipeline",dashM.total,"stores tracked",null],["Opening This Month",dashM.otm,"store openings",dashM.otm>0?"#854F0B":PD],["Items At Risk",dashM.ar,"delayed or overdue",dashM.ar>0?"#A32D2D":"#0F6E56"],["On-Time Rate",dashM.otr!==null?dashM.otr+"%":"—",dashM.otr!==null?"based on "+dashM.we+" ETAs set":"no ETAs set yet",dashM.otr===null?"#C8C6BE":dashM.otr>=80?"#0F6E56":dashM.otr>=60?"#854F0B":"#A32D2D"]].map(function(sc){
+          return e("div",{key:sc[0],style:{background:"#fff",borderRadius:18,border:"1px solid "+PM,padding:"20px 24px",flex:1,minWidth:160}},e("div",{style:{fontSize:11,color:"#C8C6BE",fontWeight:500,marginBottom:8}},sc[0]),e("div",{style:{fontSize:32,fontWeight:700,color:sc[3]||PINK,marginBottom:4}},sc[1]),e("div",{style:{fontSize:12,color:"#888780"}},sc[2]));
+        })
+      ),
+      e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,padding:"20px 24px",marginBottom:16}},
+        e("div",{style:{fontSize:14,fontWeight:700,color:PD,marginBottom:16}},"Store Opening Confidence"),
+        e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:10}},
+          dashStores.map(function(s){
+            var conf=sco(s,rows),cfg=CCFG[conf],sid2=sk(s),ac2=gac(rows,sid2),dc2=gdc(rows,sid2),pct=ac2.length?Math.round((dc2.length/ac2.length)*100):0,d=du(s.ho);
+            return e("div",{key:sid2,onClick:function(){setActiveStore(sid2);setView("site");setFilter(s.type==="refurb"?"refurb":"active");},style:{background:cfg.bg,borderRadius:14,padding:"14px 16px",cursor:"pointer",border:"1px solid "+cfg.dot+"20"}},
+              e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}},e("div",{style:{fontSize:13,fontWeight:700,color:PD,lineHeight:1.3,flex:1,marginRight:8}},s.name),e("span",{style:{fontSize:11,fontWeight:700,color:cfg.text,background:"#fff",padding:"2px 8px",borderRadius:99,whiteSpace:"nowrap"}},cfg.label)),
+              s.type==="refurb"?e("div",{style:{marginBottom:4}},e("span",{style:{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:99,background:"#EBF3FC",color:"#185FA5",border:"1px solid #85B7EB"}},"Refurb")):null,
+              e("div",{style:{fontSize:11,color:"#888780",marginBottom:8}},fd(s.op||s.ho)+" · "+(d!==null?d+"d out":"TBD")),
+              e("div",{style:{background:"rgba(255,255,255,0.6)",borderRadius:99,height:5,marginBottom:4}},e("div",{style:{background:cfg.dot,borderRadius:99,height:5,width:pct+"%"}})),
+              e("div",{style:{fontSize:11,color:"#888780"}},dc2.length+"/"+ac2.length+" complete")
+            );
+          })
+        )
+      ),
+      e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,padding:"20px 24px",marginBottom:16}},
+        e("div",{style:{fontSize:14,fontWeight:700,color:PD,marginBottom:16}},"Vendor Health — Active Stores"),
+        e("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+          Object.entries(dashM.vl).sort(function(a,b){return b[1].total-a[1].total;}).map(function(entry){
+            var vendor=entry[0],data=entry[1],otp=data.withEta>0?Math.round((data.onTime/data.withEta)*100):null;
+            return e("div",{key:vendor,style:{display:"grid",gridTemplateColumns:"200px 1fr 80px 120px",gap:12,alignItems:"center",padding:"10px 14px",background:"#FDF5F8",borderRadius:12}},
+              e("div",{style:{fontSize:13,fontWeight:600,color:PD}},vendor),
+              e("div",{style:{display:"flex",alignItems:"center",gap:8}},e("div",{style:{background:PM,borderRadius:99,height:6,flex:1}},e("div",{style:{background:data.done===data.total?"#1D9E75":PINK,borderRadius:99,height:6,width:Math.round((data.done/data.total)*100)+"%"}})),e("span",{style:{fontSize:11,color:"#888780",whiteSpace:"nowrap"}},data.done+"/"+data.total)),
+              data.atRisk>0?e("span",{style:{fontSize:11,fontWeight:600,padding:"3px 8px",borderRadius:99,background:"#FCEDED",color:"#A32D2D",textAlign:"center"}},data.atRisk+" at risk"):e("span",{style:{fontSize:11,color:"#C8C6BE",textAlign:"center"}},"—"),
+              e("span",{style:{fontSize:12,fontWeight:600,color:otp===null?"#C8C6BE":otp>=80?"#0F6E56":otp>=60?"#854F0B":"#A32D2D",textAlign:"right"}},otp!==null?otp+"% on time":"No ETAs yet")
+            );
+          })
+        )
+      ),
+      cat.complete.length>0?e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid #1D9E75",padding:"20px 24px",marginBottom:16}},
+        e("div",{style:{fontSize:14,fontWeight:700,color:PD,marginBottom:16}},"Completed Stores 🎉"),
+        e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12}},
+          cat.complete.map(function(s){var score=ss(s,rows);return e("div",{key:sk(s),onClick:function(){setActiveStore(sk(s));setFilter("complete");setView("site");},style:{background:"#F5FBF8",borderRadius:14,padding:"16px",border:"1px solid #B8E8D4",cursor:"pointer"}},e("div",{style:{fontSize:13,fontWeight:700,color:PD,marginBottom:4}},s.name),e("div",{style:{fontSize:11,color:"#888780",marginBottom:4}},s.cm+" · Opened "+fd(s.op||s.ho)),score?e("div",{style:{fontSize:11,color:"#0F6E56",fontWeight:500}},score.done+"/"+score.total+" items · "+(score.otp!=null?score.otp+"% on time":"No ETA data")):null);})
+        )
+      ):null,
+      e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,padding:"20px 24px"}},
+        e("div",{style:{fontSize:14,fontWeight:700,color:PD,marginBottom:16}},"Pipeline — Stores Opening by Month"),
+        e("div",{style:{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}},
+          Object.entries(dashM.bm).sort(function(a,b){return new Date("1 "+a[0])-new Date("1 "+b[0]);}).map(function(entry){
+            var month=entry[0],count=entry[1],today=new Date(),isNow=month===fm(today.toISOString().split("T")[0]);
+            return e("div",{key:month,style:{display:"flex",flexDirection:"column",alignItems:"center",gap:6}},e("div",{style:{width:36,background:isNow?PINK:PM,borderRadius:"6px 6px 0 0",height:Math.max(20,count*18),display:"flex",alignItems:"center",justifyContent:"center"}},e("span",{style:{fontSize:11,fontWeight:700,color:"#fff"}},count)),e("span",{style:{fontSize:10,color:isNow?PINK:"#888780",fontWeight:isNow?700:400,whiteSpace:"nowrap"}},month));
+          })
+        )
+      )
+    );
+  }
+
+  var modal = showAdd ? e("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200},onClick:function(){setShowAdd(false);}},
+    e("div",{style:{background:"#fff",borderRadius:24,padding:"28px 32px",width:480,boxShadow:"0 20px 60px rgba(0,0,0,0.15)"},onClick:function(ev){ev.stopPropagation();}},
+      e("div",{style:{fontSize:18,fontWeight:700,color:PD,marginBottom:4}},"Add New Store"),
+      e("div",{style:{fontSize:13,color:"#888780",marginBottom:20}},"Fill in what you know — everything can be updated later."),
+      e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}},
+        [["Store Name","name","text",true],["Store ID","id","text",false],["CM","cm","text",false],["Construction Start","cs","date",false],["Handover","ho","date",false],["Store Open","op","date",false]].map(function(t){
+          return e("div",{key:t[1],style:t[1]==="name"?{gridColumn:"1/-1"}:{}},e("div",{style:{fontSize:11,color:"#C8C6BE",marginBottom:4}},t[0],t[3]?e("span",{style:{color:PINK}}," *"):null),e("input",{type:t[2],value:newStore[t[1]]||"",onChange:function(ev){setNewStore(function(p){return Object.assign({},p,{[t[1]]:ev.target.value});});},style:{width:"100%",fontSize:13,padding:"8px 12px",borderRadius:10,border:"1px solid "+PM,outline:"none",background:"#FDF5F8"}}));
+        }),
+        e("div",null,e("div",{style:{fontSize:11,color:"#C8C6BE",marginBottom:4}},"Region"),e("select",{value:newStore.region,onChange:function(ev){setNewStore(function(p){return Object.assign({},p,{region:ev.target.value});});},style:{width:"100%",fontSize:13,padding:"8px 12px",borderRadius:10,border:"1px solid "+PM,outline:"none",background:"#FDF5F8"}},e("option",null,"East"),e("option",null,"West"))),
+        e("div",null,e("div",{style:{fontSize:11,color:"#C8C6BE",marginBottom:4}},"Type ",e("span",{style:{color:PINK}},"*")),e("select",{value:newStore.type,onChange:function(ev){setNewStore(function(p){return Object.assign({},p,{type:ev.target.value});});},style:{width:"100%",fontSize:13,padding:"8px 12px",borderRadius:10,border:"1px solid "+PM,outline:"none",background:"#FDF5F8"}},e("option",{value:"new"},"New Build"),e("option",{value:"refurb"},"Refurb")))
+      ),
+      e("div",{style:{display:"flex",gap:10,justifyContent:"flex-end"}},
+        e("button",{onClick:function(){setShowAdd(false);},style:{fontSize:13,padding:"8px 18px",borderRadius:99,border:"1px solid "+PM,background:"#fff",color:PD,cursor:"pointer"}},"Cancel"),
+        e("button",{onClick:addStoreHandler,disabled:!newStore.name.trim(),style:{fontSize:13,padding:"8px 20px",borderRadius:99,border:"none",background:newStore.name.trim()?PINK:"#F4C0D1",color:"#fff",cursor:newStore.name.trim()?"pointer":"default",fontWeight:600}},"Add Store")
+      )
+    )
+  ) : null;
+
+  return e("div",{style:{minHeight:"100vh",background:"#FDF5F8"}}, nav, e("div",{className:"wrap"},content), modal);
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
 </script>
 </body>
 </html>
