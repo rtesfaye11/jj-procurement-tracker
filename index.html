@@ -295,7 +295,7 @@ function App(){
         var a=document.createElement("a");a.href=url;a.download="JJ_Procurement.csv";
         document.body.appendChild(a);a.click();document.body.removeChild(a);
         setTimeout(function(){URL.revokeObjectURL(url);},1000);
-      },style:{fontSize:12,padding:"5px 12px",borderRadius:99,border:"1.5px solid rgba(255,255,255,0.6)",background:"transparent",color:"#fff",cursor:"pointer"}},"↓ CSV")
+      },style:{fontSize:12,padding:"5px 12px",borderRadius:99,border:"1.5px solid "+PM,background:PL,color:PD,cursor:"pointer",fontWeight:500}},"↓ CSV")
     )
   );
 
