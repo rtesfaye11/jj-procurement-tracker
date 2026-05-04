@@ -22,7 +22,7 @@ const e = React.createElement;
 const { useState, useMemo, useEffect, useCallback } = React;
 
 const PINK = "#E8165B", PL = "#FBEAF0", PM = "#F4C0D1", PD = "#72243E";
-const SK = "jj_s9", RK = "jj_r9", NK = "jj_n9";
+const SK = "jj_s9", RK = "jj_r9", NK = "jj_n9", FK = "jj_f9";
 
 const STORES = [
   {name:"114 Tenth Ave",id:"10638",region:"East",cm:"Devin Corcoran",cs:"2026-01-27",ho:"2026-05-11",op:"2026-05-18",type:"new"},
@@ -175,6 +175,7 @@ function App() {
     ready: useState(false),
     stores: useState(STORES),
     rows: useState(function(){return initRows(STORES);}),
+    forms: useState({}),
     view: useState("site"),
     filter: useState("active"),
     activeStore: useState(sk(STORES[0])),
@@ -202,24 +203,35 @@ function App() {
   var plSearch = state.plSearch[0], setPlSearch = state.plSearch[1];
   var showAdd = state.showAdd[0], setShowAdd = state.showAdd[1];
   var newStore = state.newStore[0], setNewStore = state.newStore[1];
-  var dashRegion = state.dashRegion[0], setDashRegion = state.dashRegion[1];
+  var forms = state.forms[0], setForms = state.forms[1];
   var dashCM = state.dashCM[0], setDashCM = state.dashCM[1];
   var plSort = state.plSort[0], setPlSort = state.plSort[1];
   var plFilter = state.plFilter[0], setPlFilter = state.plFilter[1];
 
   useEffect(function() {
     try {
-      var sr = localStorage.getItem(SK), rr = localStorage.getItem(RK), nn = localStorage.getItem(NK);
+      var sr = localStorage.getItem(SK), rr = localStorage.getItem(RK), nn = localStorage.getItem(NK), ff = localStorage.getItem(FK);
       if (sr) { var ps = JSON.parse(sr); setStores(ps); if(rr){var base=initRows(ps);setRows(Object.assign(base,JSON.parse(rr)));} }
       else if (rr) { var base2=initRows(STORES); setRows(Object.assign(base2,JSON.parse(rr))); }
       if (nn) setNotes(JSON.parse(nn));
+      if (ff) setForms(JSON.parse(ff));
     } catch(ex) {}
     setReady(true);
   }, []);
 
-  var save = useCallback(function(ns, nr, nn) {
-    try { localStorage.setItem(SK,JSON.stringify(ns)); localStorage.setItem(RK,JSON.stringify(nr)); localStorage.setItem(NK,JSON.stringify(nn)); setSaveMsg("Saved ✓"); setTimeout(function(){setSaveMsg("");},1600); } catch(ex) {}
+  var save = useCallback(function(ns, nr, nn, nf) {
+    try { localStorage.setItem(SK,JSON.stringify(ns)); localStorage.setItem(RK,JSON.stringify(nr)); localStorage.setItem(NK,JSON.stringify(nn)); if(nf!==undefined)localStorage.setItem(FK,JSON.stringify(nf)); setSaveMsg("Saved ✓"); setTimeout(function(){setSaveMsg("");},1600); } catch(ex) {}
   }, []);
+
+  function updForm(sid, field, val) {
+    setForms(function(prev) {
+      var next = Object.assign({}, prev);
+      next[sid] = Object.assign({}, prev[sid]||{}, {[field]: val});
+      localStorage.setItem(FK, JSON.stringify(next));
+      setSaveMsg("Saved ✓"); setTimeout(function(){setSaveMsg("");},1600);
+      return next;
+    });
+  }
 
   function updRow(sid, catKey, field, val) {
     setRows(function(prev) {
@@ -346,7 +358,7 @@ function App() {
     ),
     e("div",{style:{display:"flex",alignItems:"center",gap:6}},
       saveMsg ? e("span",{style:{fontSize:12,color:"#1D9E75",background:"#E2F5EE",padding:"3px 10px",borderRadius:99}},saveMsg) : null,
-      [["site","By Store"],["master","All Stores"],["vendor","By Vendor"],["pipeline","Pipeline"],["dashboard","Dashboard"]].map(function(pair){
+      [["site","By Store"],["master","All Stores"],["vendor","By Vendor"],["pipeline","Pipeline"],["forms","Forms"],["dashboard","Dashboard"]].map(function(pair){
         return e("button",{key:pair[0],onClick:function(){setView(pair[0]);},style:{fontSize:12,padding:"5px 12px",borderRadius:99,border:"1.5px solid "+(view===pair[0]?PINK:PM),background:view===pair[0]?PINK:"#fff",color:view===pair[0]?"#fff":PD,cursor:"pointer",fontWeight:view===pair[0]?600:400}},pair[1]);
       })
     )
@@ -546,6 +558,127 @@ function App() {
                 e("td",{style:Object.assign({},tdS,{minWidth:110})},e("span",{style:{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:99,background:slc.bg,color:slc.text,whiteSpace:"nowrap"}},slc.label))
               );
             }))
+          )
+        )
+      )
+    );
+  }
+
+  if(view==="forms") {
+    var FORM_FIELDS = [
+      {key:"tileSent",      label:"Tile Form Sent",        group:"tile"},
+      {key:"tileReturned",  label:"Tile Form Returned",    group:"tile"},
+      {key:"tileOrdered",   label:"Tile Order Placed",     group:"tile"},
+      {key:"lightingApproved", label:"Quote Approved",     group:"lighting"},
+      {key:"lightingQSent", label:"Questionnaire Sent",    group:"lighting"},
+      {key:"lightingQBack", label:"Questionnaire Returned",group:"lighting"},
+      {key:"lightingLink",  label:"Tracking Link Received",group:"lighting"},
+      {key:"barSent",       label:"Bar Checklist Sent",    group:"bar"},
+      {key:"barReturned",   label:"Bar Checklist Returned",group:"bar"},
+      {key:"coffeeSent",    label:"Coffee Form Sent",      group:"coffee"},
+      {key:"coffeeReady",   label:"Space Confirmed Ready", group:"coffee"},
+    ];
+
+    var activeStores2 = cat.active.concat(cat.refurb);
+
+    var groupColors = {
+      tile:     {bg:"#EBF3FC", text:"#185FA5", label:"🟦 Tile"},
+      lighting: {bg:"#FEF4E6", text:"#854F0B", label:"💡 Lighting"},
+      bar:      {bg:"#FBEAF0", text:"#72243E", label:"🍋 Bar"},
+      coffee:   {bg:"#EDF6E1", text:"#3B6D11", label:"☕ Coffee"},
+    };
+
+    function isFormComplete(sid2) {
+      var f = forms[sid2]||{};
+      return FORM_FIELDS.every(function(ff2){ return f[ff2.key+"_done"]; });
+    }
+
+    function getBarFlag(s) {
+      var sid2 = sk(s);
+      var f = forms[sid2]||{};
+      if (f["barSent_done"]) return null;
+      var barRow = rows[sid2]&&rows[sid2]["bar"];
+      if (!barRow||!barRow.eta) return null;
+      var d = du(barRow.eta);
+      if (d !== null && d <= 7) return "Bar install within "+d+"d — checklist not sent!";
+      return null;
+    }
+
+    function getCoffeeFlag(s) {
+      var sid2 = sk(s);
+      var f = forms[sid2]||{};
+      if (f["coffeeSent_done"]) return null;
+      var barRow = rows[sid2]&&rows[sid2]["bar"];
+      var mwRow = rows[sid2]&&rows[sid2]["millwork"];
+      var barDone = barRow && DONE_S.indexOf(barRow.status) > -1;
+      var mwDone = mwRow && DONE_S.indexOf(mwRow.status) > -1;
+      if (barDone && mwDone) return "Bar & Millwork complete — send coffee form!";
+      return null;
+    }
+
+    var groups = ["tile","lighting","bar","coffee"];
+    var groupLabels = {tile:"Tile",lighting:"Lighting",bar:"Bar Equipment",coffee:"Coffee Equipment"};
+
+    content = e("div",{style:{maxWidth:1300,margin:"0 auto",padding:"24px 20px"}},
+      e("div",{style:{fontSize:13,color:"#888780",marginBottom:16}},"Showing active stores only. Rows gray out automatically when all forms are complete."),
+      e("div",{style:{overflowX:"auto"}},
+        e("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:12,background:"#fff",borderRadius:20,overflow:"hidden",border:"1px solid "+PM}},
+          e("thead",null,
+            e("tr",null,
+              e("th",{style:{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:PD,background:PL,borderBottom:"2px solid "+PM,whiteSpace:"nowrap",minWidth:160}},"Store"),
+              groups.map(function(grp) {
+                var fields = FORM_FIELDS.filter(function(f){return f.group===grp;});
+                var gc = groupColors[grp];
+                return e("th",{key:grp,colSpan:fields.length,style:{padding:"12px 16px",textAlign:"center",fontSize:11,fontWeight:700,color:gc.text,background:gc.bg,borderBottom:"2px solid "+PM,borderLeft:"2px solid "+PM,whiteSpace:"nowrap"}},
+                  groupLabels[grp]+" ("+fields.length+")"
+                );
+              })
+            ),
+            e("tr",null,
+              e("th",{style:{padding:"8px 16px",background:PL,borderBottom:"2px solid "+PM}}),
+              FORM_FIELDS.map(function(ff2) {
+                var gc = groupColors[ff2.group];
+                return e("th",{key:ff2.key,style:{padding:"8px 10px",textAlign:"center",fontSize:10,fontWeight:600,color:gc.text,background:gc.bg,borderBottom:"2px solid "+PM,borderLeft:ff2.key==="tileSent"||ff2.key==="lightingApproved"||ff2.key==="barSent"||ff2.key==="coffeeSent"?"2px solid "+PM:"none",whiteSpace:"nowrap",minWidth:110}},ff2.label);
+              })
+            )
+          ),
+          e("tbody",null,
+            activeStores2.map(function(s, i) {
+              var sid2 = sk(s);
+              var f = forms[sid2]||{};
+              var complete = isFormComplete(sid2);
+              var barFlag = getBarFlag(s);
+              var coffeeFlag = getCoffeeFlag(s);
+              var hasFlag = barFlag||coffeeFlag;
+              var rowBg = complete ? "#F5FBF8" : i%2===0?"#fff":"#FDF5F8";
+
+              return e("tr",{key:sid2,style:{opacity:complete?0.6:1,background:rowBg}},
+                e("td",{style:{padding:"10px 16px",borderBottom:"1px solid #F4C0D1",minWidth:160}},
+                  e("div",{style:{display:"flex",alignItems:"center",gap:8}},
+                    complete ? e("span",{style:{fontSize:14}},"✅") : hasFlag ? e("span",{style:{fontSize:14}},"⚠️") : null,
+                    e("div",null,
+                      e("div",{style:{fontSize:13,fontWeight:700,color:complete?"#0F6E56":PD}},s.name),
+                      s.type==="refurb"?e("span",{style:{fontSize:10,padding:"1px 6px",borderRadius:99,background:"#EBF3FC",color:"#185FA5"}},"Refurb"):null,
+                      hasFlag&&!complete ? e("div",{style:{fontSize:10,color:"#A32D2D",marginTop:2,fontWeight:600}},barFlag||coffeeFlag) : null
+                    )
+                  )
+                ),
+                FORM_FIELDS.map(function(ff2) {
+                  var doneKey = ff2.key+"_done";
+                  var dateKey = ff2.key+"_date";
+                  var done = f[doneKey]||false;
+                  var date = f[dateKey]||"";
+                  var gc = groupColors[ff2.group];
+                  var isFirst = ff2.key==="tileSent"||ff2.key==="lightingApproved"||ff2.key==="barSent"||ff2.key==="coffeeSent";
+                  return e("td",{key:ff2.key,style:{padding:"8px 10px",borderBottom:"1px solid #F4C0D1",borderLeft:isFirst?"2px solid "+PM:"none",textAlign:"center",background:done?(complete?"#F5FBF8":gc.bg+"44"):"transparent",verticalAlign:"top"}},
+                    e("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",gap:4}},
+                      e("input",{type:"checkbox",checked:done,onChange:function(ev){updForm(sid2,doneKey,ev.target.checked);},style:{width:16,height:16,cursor:"pointer",accentColor:PINK}}),
+                      done ? e("input",{type:"date",value:date,onChange:function(ev){updForm(sid2,dateKey,ev.target.value);},style:{fontSize:10,padding:"2px 4px",borderRadius:6,border:"1px solid "+PM,background:"#fff",outline:"none",width:100}}) : null
+                    )
+                  );
+                })
+              );
+            })
           )
         )
       )
