@@ -262,7 +262,22 @@ function App(){
     if(list[0])setActiveStore(sk(list[0]));
   }
 
-  function filterBtns(clickFn,activeVal){
+  function exportCSV(){
+    var lines=["Store,Region,CM,Scope,Vendor,Status,Action Owner,Tracking Info,Handover,Store Open,ETA,Notes"];
+    stores.forEach(function(s){
+      var sid2=sk(s);
+      CATS.forEach(function(c){
+        var row=(rows[sid2]&&rows[sid2][c.key])||blankRow();
+        var v=row.vendorOverride||c.vendor(s.region);
+        lines.push(['"'+s.name+'"',s.region,'"'+s.cm+'"',c.label,v,row.status,row.actionOwner,'"'+(row.trackingInfo||"").replace(/"/g,"'")+'"',s.ho||"TBD",s.op||"TBD",row.eta||"",'"'+(row.notes||"").replace(/"/g,"'")+'"'].join(","));
+      });
+    });
+    var blob=new Blob(["\uFEFF"+lines.join("\n")],{type:"text/csv;charset=utf-8;"});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement("a");a.href=url;a.download="JJ_Procurement.csv";
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  }
     return fBtns.map(function(pair){
       return e("button",{key:pair[0],onClick:function(){clickFn(pair[0]);},style:{fontSize:12,padding:"4px 12px",borderRadius:99,border:"1px solid "+(activeVal===pair[0]?PINK:PM),background:activeVal===pair[0]?PL:"#fff",color:activeVal===pair[0]?PINK:PD,cursor:"pointer",fontWeight:activeVal===pair[0]?600:400}},pair[1]);
     });
@@ -279,23 +294,7 @@ function App(){
       saveMsg?e("span",{style:{fontSize:12,color:"#1D9E75",background:"#E2F5EE",padding:"3px 10px",borderRadius:99}},saveMsg):null,
       [["site","By Store"],["master","All Stores"],["vendor","By Vendor"],["pipeline","Pipeline"],["forms","Forms"],["dashboard","Dashboard"]].map(function(pair){
         return e("button",{key:pair[0],onClick:function(){setView(pair[0]);},style:{fontSize:12,padding:"5px 12px",borderRadius:99,border:"1.5px solid "+(view===pair[0]?PINK:PM),background:view===pair[0]?PINK:"#fff",color:view===pair[0]?"#fff":PD,cursor:"pointer",fontWeight:view===pair[0]?600:400}},pair[1]);
-      }),
-      e("button",{onClick:function(){
-        var lines=["Store,Region,CM,Scope,Vendor,Status,Action Owner,Tracking Info,Handover,Store Open,ETA,Notes"];
-        stores.forEach(function(s){
-          var sid2=sk(s);
-          CATS.forEach(function(c){
-            var row=(rows[sid2]&&rows[sid2][c.key])||blankRow();
-            var v=row.vendorOverride||c.vendor(s.region);
-            lines.push(['"'+s.name+'"',s.region,'"'+s.cm+'"',c.label,v,row.status,row.actionOwner,'"'+(row.trackingInfo||"").replace(/"/g,"'")+'"',s.ho||"TBD",s.op||"TBD",row.eta||"",'"'+(row.notes||"").replace(/"/g,"'")+'"'].join(","));
-          });
-        });
-        var blob=new Blob(["\uFEFF"+lines.join("\n")],{type:"text/csv;charset=utf-8;"});
-        var url=URL.createObjectURL(blob);
-        var a=document.createElement("a");a.href=url;a.download="JJ_Procurement.csv";
-        document.body.appendChild(a);a.click();document.body.removeChild(a);
-        setTimeout(function(){URL.revokeObjectURL(url);},1000);
-      },style:{fontSize:12,padding:"5px 12px",borderRadius:99,border:"1.5px solid "+PM,background:PL,color:PD,cursor:"pointer",fontWeight:500}},"↓ CSV")
+      })
     )
   );
 
@@ -309,7 +308,17 @@ function App(){
     content=e("div",{style:{maxWidth:1100,margin:"0 auto",padding:"24px 20px"}},
       e("div",{style:{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap",alignItems:"center"}},
         e("span",{style:{fontSize:12,color:"#C8C6BE",fontWeight:500}},"Store"),
-        filterBtns(filterClick,filter),storeSelect
+        filterBtns(filterClick,filter),
+        storeSelect,
+        e("button",{onClick:function(){
+          var lines=["Store,Region,CM,Scope,Vendor,Status,Action Owner,Tracking Info,Handover,Store Open,ETA,Notes"];
+          stores.forEach(function(s){var sid2=sk(s);CATS.forEach(function(c){var row=(rows[sid2]&&rows[sid2][c.key])||blankRow();var v=row.vendorOverride||c.vendor(s.region);lines.push(['"'+s.name+'"',s.region,'"'+s.cm+'"',c.label,v,row.status,row.actionOwner,'"'+(row.trackingInfo||"").replace(/"/g,"'")+'"',s.ho||"TBD",s.op||"TBD",row.eta||"",'"'+(row.notes||"").replace(/"/g,"'")+'"'].join(","));});});
+          var blob=new Blob(["\uFEFF"+lines.join("\n")],{type:"text/csv;charset=utf-8;"});
+          var url=URL.createObjectURL(blob);
+          var a=document.createElement("a");a.href=url;a.download="JJ_Procurement.csv";
+          document.body.appendChild(a);a.click();document.body.removeChild(a);
+          setTimeout(function(){URL.revokeObjectURL(url);},1000);
+        },style:{fontSize:12,padding:"4px 12px",borderRadius:99,border:"1px solid "+PM,background:PL,color:PD,cursor:"pointer",fontWeight:500,marginLeft:"auto"}},"↓ Export CSV")
       ),
       filter==="complete"&&cat.complete.length===0
         ?e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,padding:"60px 24px",textAlign:"center"}},e("div",{style:{fontSize:40,marginBottom:16}},"🎉"),e("div",{style:{fontSize:18,fontWeight:700,color:PD,marginBottom:8}},"No completed stores yet"),e("div",{style:{fontSize:14,color:"#888780"}},"Stores appear here automatically when all FF&E items are marked done."))
