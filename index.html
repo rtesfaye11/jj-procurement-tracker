@@ -232,14 +232,40 @@ function App(){
   var vs=useState("site");
   var fs=useState("active");
   var as2=useState(function(){
-    // Default to first active store (sorted by open date), not just STORES[0]
-    var today=new Date();today.setHours(0,0,0,0);
-    var firstActive=STORES.find(function(s){
-      if(!s.cs)return false;
-      var cs=new Date(s.cs.replace(/-/g,'/'));
-      return cs<=today&&s.type!=='refurb';
-    });
-    return firstActive?sk(firstActive):sk(STORES[0]);
+    // Find first truly active store from localStorage stores+rows
+    try{
+      var sr=localStorage.getItem('jj_s9');
+      var rr=localStorage.getItem('jj_r9');
+      var storeList=sr?JSON.parse(sr):STORES;
+      var rowData=rr?JSON.parse(rr):{};
+      var today=new Date();today.setHours(0,0,0,0);
+      // Sort by open date
+      var sorted=storeList.slice().sort(function(a,b){
+        var ao=a.op||a.ho||a.cs,bo=b.op||b.ho||b.cs;
+        if(!ao&&!bo)return 0;if(!ao)return 1;if(!bo)return -1;
+        var da=new Date(ao),db=new Date(bo);return da-db;
+      });
+      // Find first active non-complete store
+      for(var i=0;i<sorted.length;i++){
+        var s=sorted[i];
+        var sid=s.id||s.name;
+        if(!s.cs)continue;
+        var cs=new Date(s.cs);
+        if(cs>today)continue;
+        if(s.type==='refurb')continue;
+        // Check not complete
+        var srows=rowData[sid];
+        if(!srows)return sid;
+        var cats=['furniture','millwork','tile','lighting','plants','signage','bar','artwork','pickup','smallwares','coffee','filtration'];
+        var allDone=cats.every(function(k){
+          var row=srows[k];
+          if(!row||row.na)return true;
+          return['Complete','Delivered','Installed','Delivered & Installed'].indexOf(row.status)>-1;
+        });
+        if(!allDone)return sid;
+      }
+    }catch(ex){}
+    return STORES[1]?sk(STORES[1]):sk(STORES[0]);
   });
   var es=useState(false);
   var sms=useState("");
