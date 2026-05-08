@@ -41,28 +41,52 @@ var BASELINE_R='{"214":{"furniture":{"status":"Not Started","notes":"","actionOw
 var BASELINE_N='{"10562":"-send bar readiness form 5/11\\n-send coffee readiness form 5/18","10567":"Gary - GC for Merrick Park","10574":"schedule: https://joeandthejuice-my.sharepoint.com/my?id=%2Fpersonal%2Frekik%5Ftesfaye%5Fjoejuice%5Fcom%2FDocuments%2FAttachments%2FJoe%20%26%20the%20Juice%20%2D%20Manhasset%2C%20NY%20Project%20Schedule%204%2D8%2Epdf&parent=%2Fpersonal%2Frekik%5Ftesfaye%5Fjoejuice%5Fcom%2FDocuments%2FAttachments\\n\\n-send bar install form 5/25\\n-send coffee install form 6/22","10585":"PM for project - Melissa Marletta\\nmelissa@encoreconstruction.net\\n202-699-0939\\n\\n","10597":"-send bar readiness form on 5/18\\n-send coffee readiness form 5/25","10618":"**ship tile & lighting (as soon as available) to KDC\'s warehouse.\\n-KDC warehouse address:\\n1927 N Glasselle St, Orange, CA 92865\\nAttn: Scott  - 714-497-5943\\nAttn: Paul  - 714-323-1445\\n-already sent (old) tile intake bar form to KDC for order placement. need to send bar readiness form on 7/13, and coffee install form on 8/10","10654":"JUICER\'S HOME","10655":"all timelines contingent on schedule\\n-send bar readiness form 7/6\\n-send coffee install form 7/27\\n-site super contact: Tom Evers 561-818-7082\\nTjevers1031@gmail.com ","10659":"-send bar readiness form 6/15\\n-send coffee install form 7/20"}';
 var BASELINE_F='{"10203":{"tileSent_na":true,"tileReturned_na":true,"tileOrdered_na":true,"lightingApproved_na":true,"lightingQSent_na":true,"lightingQBack_na":true,"lightingLink_na":true,"barSent_na":true,"barReturned_na":true,"coffeeSent_na":true,"coffeeReady_na":true},"10562":{"tileSent_done":true,"tileReturned_done":true,"tileOrdered_done":true,"lightingApproved_done":true,"lightingQSent_done":true,"lightingQBack_done":true,"lightingLink_done":true},"10574":{"tileSent_done":true,"tileReturned_done":true,"tileOrdered_done":true,"lightingApproved_done":true,"lightingQSent_done":true,"lightingQBack_done":true,"lightingLink_done":true},"10597":{"tileSent_done":true,"tileReturned_done":true,"tileOrdered_done":true,"lightingApproved_done":true,"lightingQSent_done":true,"lightingQBack_done":true,"lightingLink_done":true},"10611":{"tileSent_done":true,"tileReturned_done":true,"tileOrdered_done":true,"lightingApproved_done":true,"lightingQSent_done":true,"lightingLink_done":true,"lightingQBack_done":true,"barSent_done":true,"barReturned_done":true},"10631":{"tileSent_done":true,"tileReturned_done":true,"tileOrdered_done":true,"lightingApproved_done":true,"lightingQSent_done":true,"lightingQBack_done":true,"lightingLink_done":true},"10638":{"tileSent_na":true,"tileReturned_na":true,"tileOrdered_na":true,"lightingApproved_na":true,"lightingQSent_na":true,"lightingQBack_na":true,"lightingLink_na":true,"barSent_na":true,"barReturned_na":true,"coffeeSent_na":true,"coffeeReady_na":true},"10659":{"tileSent_done":true,"tileReturned_done":true,"tileReturned_date":"2026-04-23","tileOrdered_done":true,"tileOrdered_date":"2026-05-04"}}';
 
-// Supabase config
-var SUPA_URL='https://rohegqqsypwbhgfuobhkq.supabase.co';
-var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvaGVncXN5cHdiaGdmdW9iaGtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNjUzMzEsImV4cCI6MjA5Mzg0MTMzMX0.P2z7nMlqbVHab0iDLS5tjYVmMXS2mpawK2DgSjszJcQ';
-var _supa=null;
-function getSupa(){
-  if(!_supa&&window.supabase){
-    try{_supa=window.supabase.createClient(SUPA_URL,SUPA_KEY);}catch(e){console.error('Supabase init error',e);}
-  }
-  return _supa;
-}
-async function dbGet(key){
+// GitHub API storage — saves data.json to the repo, works on any network
+var GH_TOKEN='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';
+var GH_REPO='rtesfaye11/jj-procurement-tracker';
+var GH_FILE='data.json';
+var GH_API='https://api.github.com/repos/'+GH_REPO+'/contents/'+GH_FILE;
+var _ghSha=null;
+var _saveTimer=null;
+var _pendingSave=null;
+
+async function dbGetAll(){
   try{
-    var s=getSupa();if(!s)return null;
-    var r=await s.from('procurement_data').select('value').eq('key',key).maybeSingle();
-    return(r&&r.data)?r.data.value:null;
-  }catch(e){console.error('dbGet error',e);return null;}
+    var r=await fetch(GH_API+'?t='+Date.now(),{headers:{'Authorization':'token '+GH_TOKEN,'Accept':'application/vnd.github.v3+json'}});
+    if(!r.ok)return null;
+    var j=await r.json();
+    _ghSha=j.sha;
+    var decoded=atob(j.content.replace(/
+/g,''));
+    return JSON.parse(decoded);
+  }catch(e){console.error('dbGetAll error',e);return null;}
 }
-async function dbSet(key,value){
+
+async function dbSetAll(data){
   try{
-    var s=getSupa();if(!s)return;
-    await s.from('procurement_data').upsert({key:key,value:value},{onConflict:'key'});
-  }catch(e){console.error('dbSet error',e);}
+    var content=btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+    var body={message:'update tracker data',content:content};
+    if(_ghSha)body.sha=_ghSha;
+    var r=await fetch(GH_API,{method:'PUT',headers:{'Authorization':'token '+GH_TOKEN,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(r.ok){var j=await r.json();_ghSha=j.content.sha;}
+    return r.ok;
+  }catch(e){console.error('dbSetAll error',e);return false;}
+}
+
+// Debounced save — batches rapid changes into one GitHub write
+function scheduleSave(data){
+  _pendingSave=data;
+  if(_saveTimer)clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(async function(){
+    if(_pendingSave){
+      var ok=await dbSetAll(_pendingSave);
+      _pendingSave=null;
+      if(ok){
+        var el=document.getElementById('savemsg');
+        if(el){el.textContent='Saved ✓';setTimeout(function(){if(el)el.textContent='';},1600);}
+      }
+    }
+  },1500);
 }
 
 var STORES=[
@@ -229,15 +253,22 @@ function App(){
   var stuck=stk[0],setStuck=stk[1];
   var activity=actLog[0],setActivity=actLog[1];
 
-  // Load: Supabase is source of truth. localStorage is cache for speed.
+  // Load: GitHub data.json is source of truth. localStorage is instant cache.
   useEffect(function(){
     async function loadData(){
-      // First show app with localStorage so it's instant
+      // Step 1: show app instantly from localStorage
       try{
         var sr=localStorage.getItem(SK),rr=localStorage.getItem(RK),nn=localStorage.getItem(NK),ff=localStorage.getItem(FK);
         var ts=localStorage.getItem("jj_ts9"),sk2=localStorage.getItem("jj_stk9"),al=localStorage.getItem("jj_act9");
         if(sr){var ps=JSON.parse(sr);setStores(ps);if(rr){var b=initRows(ps);setRows(Object.assign(b,JSON.parse(rr)));}}
         else if(rr){var b2=initRows(STORES);setRows(Object.assign(b2,JSON.parse(rr)));}
+        else{
+          // No localStorage at all — use baseline while GitHub loads
+          var b0=initRows(STORES);
+          setRows(Object.assign(b0,JSON.parse(BASELINE_R)));
+          setNotes(JSON.parse(BASELINE_N));
+          setForms(JSON.parse(BASELINE_F));
+        }
         if(nn)setNotes(JSON.parse(nn));
         if(ff)setForms(JSON.parse(ff));
         if(ts)setTimestamps(JSON.parse(ts));
@@ -246,32 +277,22 @@ function App(){
       }catch(ex){}
       setReady(true);
 
-      // Then fetch latest from Supabase and update if newer data exists
+      // Step 2: fetch latest from GitHub and update
       try{
-        var sr2=await dbGet(SK);
-        var rr2=await dbGet(RK);
-        var nn2=await dbGet(NK);
-        var ff2=await dbGet(FK);
-        var ts2=await dbGet("jj_ts9");
-        var sk22=await dbGet("jj_stk9");
-        var al2=await dbGet("jj_act9");
-        if(!sr2&&!rr2){
-          // Nothing in Supabase — seed it with baseline data now
-          if(!localStorage.getItem(RK)){
-            try{
-              var b4=initRows(STORES);
-              var br=Object.assign(b4,JSON.parse(BASELINE_R));
-              setRows(br);
-              setNotes(JSON.parse(BASELINE_N));
-              setForms(JSON.parse(BASELINE_F));
-              // Push baseline up to Supabase so everyone gets it
-              dbSet(RK,BASELINE_R);
-              dbSet(NK,BASELINE_N);
-              dbSet(FK,BASELINE_F);
-            }catch(ex){}
-          }
+        var ghData=await dbGetAll();
+        if(!ghData){
+          // No data.json yet — seed GitHub with baseline
+          var initData={};
+          initData[SK]=localStorage.getItem(SK)||JSON.stringify(STORES);
+          initData[RK]=localStorage.getItem(RK)||BASELINE_R;
+          initData[NK]=localStorage.getItem(NK)||BASELINE_N;
+          initData[FK]=localStorage.getItem(FK)||BASELINE_F;
+          await dbSetAll(initData);
           return;
         }
+        // Apply GitHub data to app state
+        var sr2=ghData[SK],rr2=ghData[RK],nn2=ghData[NK],ff2=ghData[FK];
+        var ts2=ghData["jj_ts9"],sk22=ghData["jj_stk9"],al2=ghData["jj_act9"];
         if(sr2){
           var ps2=JSON.parse(sr2);setStores(ps2);
           localStorage.setItem(SK,sr2);
@@ -282,14 +303,14 @@ function App(){
         if(ts2){setTimestamps(JSON.parse(ts2));localStorage.setItem("jj_ts9",ts2);}
         if(sk22){setStuck(JSON.parse(sk22));localStorage.setItem("jj_stk9",sk22);}
         if(al2){setActivity(JSON.parse(al2));localStorage.setItem("jj_act9",al2);}
-      }catch(ex){console.error('Supabase fetch error:',ex);}
+      }catch(ex){console.error('GitHub fetch error:',ex);}
     }
     loadData();
   },[]);
 
   var save=useCallback(function(ns2,nr,nn,nf,nts,nstk,nal){
     try{
-      // Save to localStorage for speed
+      // Save to localStorage immediately (instant)
       localStorage.setItem(SK,JSON.stringify(ns2));
       localStorage.setItem(RK,JSON.stringify(nr));
       localStorage.setItem(NK,JSON.stringify(nn));
@@ -297,15 +318,17 @@ function App(){
       if(nts!==undefined)localStorage.setItem("jj_ts9",JSON.stringify(nts));
       if(nstk!==undefined)localStorage.setItem("jj_stk9",JSON.stringify(nstk));
       if(nal!==undefined)localStorage.setItem("jj_act9",JSON.stringify(nal));
-      // Also save to Supabase so all users see updates
-      dbSet(SK,JSON.stringify(ns2));
-      dbSet(RK,JSON.stringify(nr));
-      dbSet(NK,JSON.stringify(nn));
-      if(nf!==undefined)dbSet(FK,JSON.stringify(nf));
-      if(nts!==undefined)dbSet("jj_ts9",JSON.stringify(nts));
-      if(nstk!==undefined)dbSet("jj_stk9",JSON.stringify(nstk));
-      if(nal!==undefined)dbSet("jj_act9",JSON.stringify(nal));
-      setSaveMsg("Saved ✓");setTimeout(function(){setSaveMsg("");},1600);
+      // Schedule a debounced save to GitHub (batches rapid changes)
+      var ghData={};
+      ghData[SK]=JSON.stringify(ns2);
+      ghData[RK]=JSON.stringify(nr);
+      ghData[NK]=JSON.stringify(nn);
+      if(nf!==undefined)ghData[FK]=JSON.stringify(nf);
+      if(nts!==undefined)ghData["jj_ts9"]=JSON.stringify(nts);
+      if(nstk!==undefined)ghData["jj_stk9"]=JSON.stringify(nstk);
+      if(nal!==undefined)ghData["jj_act9"]=JSON.stringify(nal);
+      scheduleSave(ghData);
+      setSaveMsg("Saving...");
     }catch(ex){}
   },[]);
 
@@ -500,7 +523,7 @@ function App(){
       })
     ),
     e("div",{style:{display:"flex",alignItems:"center",gap:8,flexShrink:0}},
-      saveMsg?e("span",{style:{fontSize:12,color:"#1D9E75",background:"#E2F5EE",padding:"3px 10px",borderRadius:99,whiteSpace:"nowrap"}},saveMsg):null
+      e("span",{id:"savemsg",style:{fontSize:12,color:"#1D9E75",background:"#E2F5EE",padding:"3px 10px",borderRadius:99,whiteSpace:"nowrap",visibility:saveMsg?"visible":"hidden"}},saveMsg||"Saved ✓")
     )
   );
 
