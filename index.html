@@ -1073,14 +1073,14 @@ null
     )
   ):null;
 
-  var tokenBanner=!localStorage.getItem('jj_gh_token')?e("div",{style:{background:"#FEF4E6",borderBottom:"1px solid #EF9F27",padding:"8px 20px",display:"flex",alignItems:"center",gap:10,fontSize:12}},
-    e("span",{style:{color:"#854F0B",fontWeight:600}},"⚙️ First-time setup: enter your GitHub token to enable saving for all users"),
+  // Only show token banner if: no token AND has local row data (meaning they're the editor, not a viewer)
+  var tokenBanner=(!localStorage.getItem('jj_gh_token')&&localStorage.getItem('jj_r9'))?e("div",{style:{background:"#FEF4E6",borderBottom:"1px solid #EF9F27",padding:"8px 20px",display:"flex",alignItems:"center",gap:10,fontSize:12}},
+    e("span",{style:{color:"#854F0B",fontWeight:600}},"⚙️ Enter your GitHub token to enable live sync for your team"),
     e("input",{id:"gh_token_input",type:"password",placeholder:"paste token here",style:{fontSize:12,padding:"4px 10px",borderRadius:8,border:"1px solid #EF9F27",outline:"none",width:280}}),
     e("button",{onClick:function(){
       var t=document.getElementById('gh_token_input').value.trim();
       if(t){localStorage.setItem('jj_gh_token',t);window.location.reload();}
-    },style:{fontSize:12,padding:"4px 14px",borderRadius:99,border:"none",background:"#EF9F27",color:"#fff",cursor:"pointer",fontWeight:600}},"Save Token"),
-    e("span",{style:{color:"#888780"}},"(only you need to do this — viewers see data automatically)")
+    },style:{fontSize:12,padding:"4px 14px",borderRadius:99,border:"none",background:"#EF9F27",color:"#fff",cursor:"pointer",fontWeight:600}},"Save Token")
   ):null;
 
   return e("div",{style:{minHeight:"100vh",background:"#FDF5F8"}},nav,tokenBanner,e("div",{className:"wrap"},content),modal);
