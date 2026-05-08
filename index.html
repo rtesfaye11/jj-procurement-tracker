@@ -210,7 +210,16 @@ function App(){
   var fms=useState({});
   var vs=useState("site");
   var fs=useState("active");
-  var as2=useState(sk(STORES[0]));
+  var as2=useState(function(){
+    // Default to first active store (sorted by open date), not just STORES[0]
+    var today=new Date();today.setHours(0,0,0,0);
+    var firstActive=STORES.find(function(s){
+      if(!s.cs)return false;
+      var cs=new Date(s.cs.replace(/-/g,'/'));
+      return cs<=today&&s.type!=='refurb';
+    });
+    return firstActive?sk(firstActive):sk(STORES[0]);
+  });
   var es=useState(false);
   var sms=useState("");
   var ns=useState({});
