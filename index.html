@@ -281,33 +281,39 @@ function App(){
       }catch(ex){}
       setReady(true);
 
-      // Step 2: fetch latest from GitHub and update
+      // Step 2: GitHub sync
       try{
-        var ghData=await dbGetAll();
-        if(!ghData){
-          // No data.json yet — seed GitHub with baseline
-          var initData={};
-          initData[SK]=localStorage.getItem(SK)||JSON.stringify(STORES);
-          initData[RK]=localStorage.getItem(RK)||BASELINE_R;
-          initData[NK]=localStorage.getItem(NK)||BASELINE_N;
-          initData[FK]=localStorage.getItem(FK)||BASELINE_F;
-          await dbSetAll(initData);
-          return;
+        var hasLocalData=!!localStorage.getItem(RK);
+        if(!hasLocalData){
+          // Viewer with no local data — load from GitHub
+          var ghData=await dbGetAll();
+          if(ghData){
+            var sr2=ghData[SK],rr2=ghData[RK],nn2=ghData[NK],ff2=ghData[FK];
+            if(sr2){
+              var ps2=JSON.parse(sr2);setStores(ps2);
+              localStorage.setItem(SK,sr2);
+              if(rr2){var b3=initRows(ps2);setRows(Object.assign(b3,JSON.parse(rr2)));localStorage.setItem(RK,rr2);}
+            }
+            if(nn2){setNotes(JSON.parse(nn2));localStorage.setItem(NK,nn2);}
+            if(ff2){setForms(JSON.parse(ff2));localStorage.setItem(FK,ff2);}
+          } else {
+            // Nothing on GitHub yet — use baseline
+            var b4=initRows(STORES);
+            setRows(Object.assign(b4,JSON.parse(BASELINE_R)));
+            setNotes(JSON.parse(BASELINE_N));
+            setForms(JSON.parse(BASELINE_F));
+          }
         }
-        // Apply GitHub data to app state
-        var sr2=ghData[SK],rr2=ghData[RK],nn2=ghData[NK],ff2=ghData[FK];
-        var ts2=ghData["jj_ts9"],sk22=ghData["jj_stk9"],al2=ghData["jj_act9"];
-        if(sr2){
-          var ps2=JSON.parse(sr2);setStores(ps2);
-          localStorage.setItem(SK,sr2);
-          if(rr2){var b3=initRows(ps2);setRows(Object.assign(b3,JSON.parse(rr2)));localStorage.setItem(RK,rr2);}
+        // Has local data — push it to GitHub so viewers get latest
+        else if(localStorage.getItem('jj_gh_token')){
+          var pushData={};
+          pushData[SK]=localStorage.getItem(SK);
+          pushData[RK]=localStorage.getItem(RK);
+          pushData[NK]=localStorage.getItem(NK)||'{}';
+          pushData[FK]=localStorage.getItem(FK)||'{}';
+          scheduleSave(pushData);
         }
-        if(nn2){setNotes(JSON.parse(nn2));localStorage.setItem(NK,nn2);}
-        if(ff2){setForms(JSON.parse(ff2));localStorage.setItem(FK,ff2);}
-        if(ts2){setTimestamps(JSON.parse(ts2));localStorage.setItem("jj_ts9",ts2);}
-        if(sk22){setStuck(JSON.parse(sk22));localStorage.setItem("jj_stk9",sk22);}
-        if(al2){setActivity(JSON.parse(al2));localStorage.setItem("jj_act9",al2);}
-      }catch(ex){console.error('GitHub fetch error:',ex);}
+      }catch(ex){console.error('GitHub sync error:',ex);}
     }
     loadData();
   },[]);
@@ -614,8 +620,7 @@ function App(){
                     e("span",{style:{fontSize:15}},cat2.emoji),
                     e("div",null,
                       e("span",{style:{fontSize:13,fontWeight:600,color:row.na?"#C8C6BE":PD}},cat2.label),
-                      tsInfo&&DONE_S.indexOf(tsInfo.status)>-1?e("div",{style:{fontSize:10,color:"#1D9E75",fontFamily:"DM Mono",marginTop:1}},
-                        "→ "+fts(tsInfo.at)):null
+null
                     )
                   ),
                   e("input",{value:vendor,onChange:function(ev){updRow(sid,cat2.key,"vendorOverride",ev.target.value);},disabled:row.na,style:iS({border:"1px solid "+(row.vendorOverride?"#EF9F27":PM),background:row.vendorOverride?"#FEF4E6":"#FDF5F8",color:row.vendorOverride?"#854F0B":"#5F5E5A"})}),
