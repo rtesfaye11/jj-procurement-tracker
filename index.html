@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -281,65 +281,46 @@ function App(){
   var stuck=stk[0],setStuck=stk[1];
   var activity=actLog[0],setActivity=actLog[1];
 
-  // Load: GitHub data.json is source of truth. localStorage is instant cache.
+  // Data loads synchronously in useState above. Just mark ready and handle GitHub sync.
   useEffect(function(){
-    async function loadData(){
-      // Step 1: show app instantly from localStorage
+    setReady(true);
+    // Push local data to GitHub for viewers (only if token exists)
+    async function syncToGitHub(){
       try{
-        var sr=localStorage.getItem(SK),rr=localStorage.getItem(RK),nn=localStorage.getItem(NK),ff=localStorage.getItem(FK);
-        var ts=localStorage.getItem("jj_ts9"),sk2=localStorage.getItem("jj_stk9"),al=localStorage.getItem("jj_act9");
-        if(sr){var ps=JSON.parse(sr);setStores(ps);if(rr){var b=initRows(ps);setRows(Object.assign(b,JSON.parse(rr)));}}
-        else if(rr){var b2=initRows(STORES);setRows(Object.assign(b2,JSON.parse(rr)));}
-        else{
-          // No localStorage at all — use baseline while GitHub loads
-          var b0=initRows(STORES);
-          setRows(Object.assign(b0,JSON.parse(BASELINE_R)));
-          setNotes(JSON.parse(BASELINE_N));
-          setForms(JSON.parse(BASELINE_F));
-        }
-        if(nn)setNotes(JSON.parse(nn));
-        if(ff)setForms(JSON.parse(ff));
-        if(ts)setTimestamps(JSON.parse(ts));
-        if(sk2)setStuck(JSON.parse(sk2));
-        if(al)setActivity(JSON.parse(al));
-      }catch(ex){}
-      setReady(true);
-
-      // Step 2: GitHub sync
-      try{
-        var hasLocalData=!!localStorage.getItem(RK);
-        if(!hasLocalData){
-          // Viewer with no local data — load from GitHub
-          var ghData=await dbGetAll();
-          if(ghData){
-            var sr2=ghData[SK],rr2=ghData[RK],nn2=ghData[NK],ff2=ghData[FK];
-            if(sr2){
-              var ps2=JSON.parse(sr2);setStores(ps2);
-              localStorage.setItem(SK,sr2);
-              if(rr2){var b3=initRows(ps2);setRows(Object.assign(b3,JSON.parse(rr2)));localStorage.setItem(RK,rr2);}
-            }
-            if(nn2){setNotes(JSON.parse(nn2));localStorage.setItem(NK,nn2);}
-            if(ff2){setForms(JSON.parse(ff2));localStorage.setItem(FK,ff2);}
-          } else {
-            // Nothing on GitHub yet — use baseline
-            var b4=initRows(STORES);
-            setRows(Object.assign(b4,JSON.parse(BASELINE_R)));
-            setNotes(JSON.parse(BASELINE_N));
-            setForms(JSON.parse(BASELINE_F));
-          }
-        }
-        // Has local data — push it to GitHub so viewers get latest
-        else if(localStorage.getItem('jj_gh_token')){
+        if(!localStorage.getItem('jj_gh_token'))return;
+        var hasLocal=localStorage.getItem(RK);
+        if(hasLocal){
           var pushData={};
-          pushData[SK]=localStorage.getItem(SK);
+          pushData[SK]=localStorage.getItem(SK)||JSON.stringify(STORES);
           pushData[RK]=localStorage.getItem(RK);
           pushData[NK]=localStorage.getItem(NK)||'{}';
           pushData[FK]=localStorage.getItem(FK)||'{}';
           scheduleSave(pushData);
         }
-      }catch(ex){console.error('GitHub sync error:',ex);}
+      }catch(ex){}
     }
-    loadData();
+    // For viewers with no local data, load from GitHub
+    async function loadForViewer(){
+      try{
+        if(localStorage.getItem(RK))return; // has own data, skip
+        var ghData=await dbGetAll();
+        if(ghData&&ghData[RK]){
+          var sr2=ghData[SK],rr2=ghData[RK],nn2=ghData[NK],ff2=ghData[FK];
+          if(sr2){var ps2=JSON.parse(sr2);setStores(ps2);localStorage.setItem(SK,sr2);}
+          if(rr2){var base=initRows(sr2?JSON.parse(sr2):STORES);setRows(Object.assign(base,JSON.parse(rr2)));localStorage.setItem(RK,rr2);}
+          if(nn2){setNotes(JSON.parse(nn2));localStorage.setItem(NK,nn2);}
+          if(ff2){setForms(JSON.parse(ff2));localStorage.setItem(FK,ff2);}
+        } else {
+          // No GitHub data yet - use baseline
+          var b=initRows(STORES);
+          setRows(Object.assign(b,JSON.parse(BASELINE_R)));
+          setNotes(JSON.parse(BASELINE_N));
+          setForms(JSON.parse(BASELINE_F));
+        }
+      }catch(ex){}
+    }
+    syncToGitHub();
+    loadForViewer();
   },[]);
 
   var save=useCallback(function(ns2,nr,nn,nf,nts,nstk,nal){
