@@ -205,9 +205,30 @@ function Pill(props){return e("span",{style:{display:"inline-flex",alignItems:"c
 
 function App(){
   var rs=useState(false);
-  var ss=useState(STORES);
-  var rws=useState(function(){return initRows(STORES);});
-  var fms=useState({});
+  var ss=useState(function(){
+    try{
+      var sr=localStorage.getItem('jj_s9');
+      if(sr)return JSON.parse(sr);
+    }catch(ex){}
+    return STORES;
+  });
+  var rws=useState(function(){
+    // Load rows from localStorage synchronously on first render
+    try{
+      var sr=localStorage.getItem('jj_s9');
+      var rr=localStorage.getItem('jj_r9');
+      if(rr){
+        var ps=sr?JSON.parse(sr):STORES;
+        var b=initRows(ps);
+        return Object.assign(b,JSON.parse(rr));
+      }
+    }catch(ex){}
+    return initRows(STORES);
+  });
+  var fms=useState(function(){
+    try{var f=localStorage.getItem('jj_f9');if(f)return JSON.parse(f);}catch(ex){}
+    return {};
+  });
   var vs=useState("site");
   var fs=useState("active");
   var as2=useState(function(){
@@ -222,7 +243,10 @@ function App(){
   });
   var es=useState(false);
   var sms=useState("");
-  var ns=useState({});
+  var ns=useState(function(){
+    try{var n=localStorage.getItem('jj_n9');if(n)return JSON.parse(n);}catch(ex){}
+    return {};
+  });
   var pss=useState("");
   var sas=useState(false);
   var nss=useState({name:"",id:"",region:"East",cm:"",cs:"",ho:"",op:"",type:"new"});
