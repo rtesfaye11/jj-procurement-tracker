@@ -32,18 +32,25 @@ var SK="jj_s9",RK="jj_r9",NK="jj_n9",FK="jj_f9";
 // Supabase config
 var SUPA_URL='https://rohegqqsypwbhgfuobhkq.supabase.co';
 var SUPA_KEY='sb_publishable_yatEtt-eKbulrehWIMyAEA_MhQSf_NX';
-var supabase=window.supabase.createClient(SUPA_URL,SUPA_KEY);
-
+var _supa=null;
+function getSupa(){
+  if(!_supa&&window.supabase){
+    try{_supa=window.supabase.createClient(SUPA_URL,SUPA_KEY);}catch(e){console.error('Supabase init error',e);}
+  }
+  return _supa;
+}
 async function dbGet(key){
   try{
-    var r=await supabase.from('procurement_data').select('value').eq('key',key).single();
-    return r.data?r.data.value:null;
-  }catch(e){return null;}
+    var s=getSupa();if(!s)return null;
+    var r=await s.from('procurement_data').select('value').eq('key',key).maybeSingle();
+    return(r&&r.data)?r.data.value:null;
+  }catch(e){console.error('dbGet error',e);return null;}
 }
 async function dbSet(key,value){
   try{
-    await supabase.from('procurement_data').upsert({key:key,value:value},{onConflict:'key'});
-  }catch(e){}
+    var s=getSupa();if(!s)return;
+    await s.from('procurement_data').upsert({key:key,value:value},{onConflict:'key'});
+  }catch(e){console.error('dbSet error',e);}
 }
 
 var STORES=[
@@ -212,6 +219,8 @@ function App(){
 
   // Load from Supabase (shared) with localStorage fallback
   useEffect(function(){
+    // Hard timeout — always show app within 5 seconds no matter what
+    var timeout=setTimeout(function(){setReady(true);},5000);
     async function loadData(){
       try{
         // Try Supabase first
@@ -239,7 +248,8 @@ function App(){
         if(ts)setTimestamps(JSON.parse(ts));
         if(sk2)setStuck(JSON.parse(sk2));
         if(al)setActivity(JSON.parse(al));
-      }catch(ex){console.error(ex);}
+      }catch(ex){console.error('Load error:',ex);}
+      clearTimeout(timeout);
       setReady(true);
     }
     loadData();
