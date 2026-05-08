@@ -7,24 +7,25 @@
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background: #FDF5F8; min-height: 100vh; }
-input, select, textarea { font-family: inherit; }
-.wrap { overflow-x: auto; }
-::-webkit-scrollbar { height: 4px; width: 4px; }
-::-webkit-scrollbar-thumb { background: #F4C0D1; border-radius: 99px; }
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:#FDF5F8;min-height:100vh;}
+input,select,textarea{font-family:inherit;}
+.wrap{overflow-x:auto;}
+::-webkit-scrollbar{height:4px;width:4px;}
+::-webkit-scrollbar-thumb{background:#F4C0D1;border-radius:99px;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.fade-in{animation:fadeIn 0.18s ease;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script>
-var e = React.createElement;
-var useState = React.useState;
-var useMemo = React.useMemo;
-var useEffect = React.useEffect;
-var useCallback = React.useCallback;
+var e=React.createElement,useState=React.useState,useMemo=React.useMemo,useEffect=React.useEffect,useCallback=React.useCallback,useRef=React.useRef;
 
 var PINK="#E8165B",PL="#FBEAF0",PM="#F4C0D1",PD="#72243E";
+// CRITICAL: storage keys preserved exactly
 var SK="jj_s9",RK="jj_r9",NK="jj_n9",FK="jj_f9";
 
 var STORES=[
@@ -74,7 +75,7 @@ var STORES=[
   {name:"LAX - TBT North Playa Vista",id:"10506",region:"West",cm:"Nathaniel Lindley",cs:"2027-01-01",ho:"2027-06-27",op:"2027-07-04",type:"new"},
   {name:"Starling Montrose - Houston",id:"",region:"East",cm:"Nathaniel Lindley",cs:"",ho:"",op:"2028-01-01",type:"new"},
   {name:"Miami Central",id:"",region:"East",cm:"Can Gazioglu",cs:"2026-05-20",ho:"2026-05-20",op:"",type:"refurb"},
-  {name:"1451 Brickell Ave",id:"10201",region:"East",cm:"Can Gazioglu",cs:"2026-07-01",ho:"2026-07-01",op:"",type:"refurb"},
+  {name:"1451 Brickell Ave",id:"10201",region:"East",cm:"Can Gazioglu",cs:"2026-07-01",ho:"2026-09-14",op:"2026-09-21",type:"refurb"},
   {name:"MSP Airport",id:"10341",region:"East",cm:"Can Gazioglu",cs:"2026-09-08",ho:"2026-09-08",op:"",type:"refurb"},
   {name:"161 Prince Street - Soho",id:"214",region:"East",cm:"Can Gazioglu",cs:"",ho:"",op:"",type:"refurb"},
   {name:"300 S Biscayne Blvd - Downtown Miami",id:"",region:"East",cm:"Can Gazioglu",cs:"",ho:"",op:"",type:"refurb"},
@@ -121,12 +122,7 @@ var FORM_FIELDS=[
   {key:"coffeeReady",label:"Space Confirmed Ready",group:"coffee"},
 ];
 
-var GROUP_CFG={
-  tile:{bg:"#EBF3FC",text:"#185FA5",label:"Tile"},
-  lighting:{bg:"#FEF4E6",text:"#854F0B",label:"Lighting"},
-  bar:{bg:"#FBEAF0",text:"#72243E",label:"Bar Equipment"},
-  coffee:{bg:"#EDF6E1",text:"#3B6D11",label:"Coffee Equipment"},
-};
+var GROUP_CFG={tile:{bg:"#EBF3FC",text:"#185FA5",label:"Tile"},lighting:{bg:"#FEF4E6",text:"#854F0B",label:"Lighting"},bar:{bg:"#FBEAF0",text:"#72243E",label:"Bar Equipment"},coffee:{bg:"#EDF6E1",text:"#3B6D11",label:"Coffee Equipment"}};
 
 function sk(s){return s.id||s.name;}
 function blankRow(){return{status:"Not Started",notes:"",actionOwner:"J&TJ",trackingInfo:"",vendorOverride:"",eta:"",na:false};}
@@ -145,44 +141,125 @@ function sob(arr){return arr.slice().sort(function(a,b){var ao=a.op||a.ho||a.cs,
 function sco(store,rows){var sid=sk(store),ac=gac(rows,sid),done=gdc(rows,sid),ar=ac.filter(function(c){return rows[sid]&&rows[sid][c.key]&&RISK_S.indexOf(rows[sid][c.key].status)>-1;}),days=du(store.ho);if(ar.length>0)return"red";if(days!==null&&days<=14&&done.length<ac.length*0.7)return"red";if(days!==null&&days<=30&&done.length<ac.length*0.5)return"amber";if(ac.filter(function(c){return rows[sid]&&rows[sid][c.key]&&!rows[sid][c.key].eta&&DONE_S.indexOf(rows[sid][c.key].status)===-1;}).length>ac.length*0.5)return"amber";return"green";}
 function ss2(store,rows){var sid=sk(store),ac=gac(rows,sid);if(!ac.length)return null;var done=gdc(rows,sid),we=0,ot=0;ac.forEach(function(c){var row=(rows[sid]&&rows[sid][c.key])||blankRow();if(row.eta){we++;var x=er(row.eta,store.ho);if(x==="ok"||x==="tight")ot++;}});return{cp:Math.round((done.length/ac.length)*100),otp:we>0?Math.round((ot/we)*100):null,done:done.length,total:ac.length};}
 
+// Timestamp helper
+function nowISO(){return new Date().toISOString();}
+function fts(iso){if(!iso)return null;var d=new Date(iso);return d.toLocaleDateString("en-US",{month:"short",day:"numeric"})+", "+d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});}
+
 function Pill(props){return e("span",{style:{display:"inline-flex",alignItems:"center",gap:5,fontSize:12,fontWeight:500,padding:"3px 10px",borderRadius:99,background:props.cfg.bg,color:props.cfg.text,whiteSpace:"nowrap"}},e("span",{style:{width:6,height:6,borderRadius:"50%",background:props.cfg.text,flexShrink:0}}),props.label);}
 
 function App(){
-  var rs=useState(false),ss=useState(STORES),rws=useState(function(){return initRows(STORES);}),fms=useState({}),vs=useState("site"),fs=useState("active"),as2=useState(sk(STORES[0])),es=useState(false),sms=useState(""),ns=useState({}),pss=useState(""),sas=useState(false),nss=useState({name:"",id:"",region:"East",cm:"",cs:"",ho:"",op:"",type:"new"}),drs=useState("All"),dcs=useState("All"),pls=useState({col:"op",dir:"asc"}),pfs=useState({region:"All",cm:"All",type:"All",status:"All"});
+  var rs=useState(false);
+  var ss=useState(STORES);
+  var rws=useState(function(){return initRows(STORES);});
+  var fms=useState({});
+  var vs=useState("site");
+  var fs=useState("active");
+  var as2=useState(sk(STORES[0]));
+  var es=useState(false);
+  var sms=useState("");
+  var ns=useState({});
+  var pss=useState("");
+  var sas=useState(false);
+  var nss=useState({name:"",id:"",region:"East",cm:"",cs:"",ho:"",op:"",type:"new"});
+  var drs=useState("All");
+  var dcs=useState("All");
+  var pls=useState({col:"op",dir:"asc"});
+  var pfs=useState({region:"All",cm:"All",type:"All",status:"All"});
+  // NEW: status change timestamps and stuck flags per store+cat
+  var tss=useState({});
+  var stk=useState({});
+  // NEW: activity log
+  var actLog=useState([]);
 
-  var ready=rs[0],setReady=rs[1],stores=ss[0],setStores=ss[1],rows=rws[0],setRows=rws[1],forms=fms[0],setForms=fms[1],view=vs[0],setView=vs[1],filter=fs[0],setFilter=fs[1],activeStore=as2[0],setActiveStore=as2[1],editing=es[0],setEditing=es[1],saveMsg=sms[0],setSaveMsg=sms[1],notes=ns[0],setNotes=ns[1],plSearch=pss[0],setPlSearch=pss[1],showAdd=sas[0],setShowAdd=sas[1],newStore=nss[0],setNewStore=nss[1],dashRegion=drs[0],setDashRegion=drs[1],dashCM=dcs[0],setDashCM=dcs[1],plSort=pls[0],setPlSort=pls[1],plFilter=pfs[0],setPlFilter=pfs[1];
+  var ready=rs[0],setReady=rs[1];
+  var stores=ss[0],setStores=ss[1];
+  var rows=rws[0],setRows=rws[1];
+  var forms=fms[0],setForms=fms[1];
+  var view=vs[0],setView=vs[1];
+  var filter=fs[0],setFilter=fs[1];
+  var activeStore=as2[0],setActiveStore=as2[1];
+  var editing=es[0],setEditing=es[1];
+  var saveMsg=sms[0],setSaveMsg=sms[1];
+  var notes=ns[0],setNotes=ns[1];
+  var plSearch=pss[0],setPlSearch=pss[1];
+  var showAdd=sas[0],setShowAdd=sas[1];
+  var newStore=nss[0],setNewStore=nss[1];
+  var dashRegion=drs[0],setDashRegion=drs[1];
+  var dashCM=dcs[0],setDashCM=dcs[1];
+  var plSort=pls[0],setPlSort=pls[1];
+  var plFilter=pfs[0],setPlFilter=pfs[1];
+  var timestamps=tss[0],setTimestamps=tss[1];
+  var stuck=stk[0],setStuck=stk[1];
+  var activity=actLog[0],setActivity=actLog[1];
 
+  // Load from localStorage
   useEffect(function(){
     try{
       var sr=localStorage.getItem(SK),rr=localStorage.getItem(RK),nn=localStorage.getItem(NK),ff=localStorage.getItem(FK);
+      var ts=localStorage.getItem("jj_ts9"),sk2=localStorage.getItem("jj_stk9"),al=localStorage.getItem("jj_act9");
       if(sr){var ps=JSON.parse(sr);setStores(ps);if(rr){var b=initRows(ps);setRows(Object.assign(b,JSON.parse(rr)));}}
       else if(rr){var b2=initRows(STORES);setRows(Object.assign(b2,JSON.parse(rr)));}
       if(nn)setNotes(JSON.parse(nn));
       if(ff)setForms(JSON.parse(ff));
+      if(ts)setTimestamps(JSON.parse(ts));
+      if(sk2)setStuck(JSON.parse(sk2));
+      if(al)setActivity(JSON.parse(al));
     }catch(ex){}
     setReady(true);
   },[]);
 
-  var save=useCallback(function(ns2,nr,nn,nf){
+  var save=useCallback(function(ns2,nr,nn,nf,nts,nstk,nal){
     try{
       localStorage.setItem(SK,JSON.stringify(ns2));
       localStorage.setItem(RK,JSON.stringify(nr));
       localStorage.setItem(NK,JSON.stringify(nn));
       if(nf!==undefined)localStorage.setItem(FK,JSON.stringify(nf));
+      if(nts!==undefined)localStorage.setItem("jj_ts9",JSON.stringify(nts));
+      if(nstk!==undefined)localStorage.setItem("jj_stk9",JSON.stringify(nstk));
+      if(nal!==undefined)localStorage.setItem("jj_act9",JSON.stringify(nal));
       setSaveMsg("Saved ✓");setTimeout(function(){setSaveMsg("");},1600);
     }catch(ex){}
   },[]);
 
-  function updRow(sid,catKey,field,val){setRows(function(prev){var next=Object.assign({},prev);next[sid]=Object.assign({},prev[sid]);next[sid][catKey]=Object.assign({},(prev[sid]&&prev[sid][catKey])||blankRow(),{[field]:val});save(stores,next,notes,forms);return next;});}
-  function updStore(id,field,val){setStores(function(prev){var next=prev.map(function(s){return sk(s)===id?Object.assign({},s,{[field]:val}):s;});save(next,rows,notes,forms);return next;});}
-  function updNotes(sid,val){var next=Object.assign({},notes,{[sid]:val});setNotes(next);save(stores,rows,next,forms);}
-  function updForm(sid,field,val){setForms(function(prev){var next=Object.assign({},prev);next[sid]=Object.assign({},prev[sid]||{},{[field]:val});save(stores,rows,notes,next);return next;});}
+  function updRow(sid,catKey,field,val){
+    setRows(function(prev){
+      var next=Object.assign({},prev);
+      next[sid]=Object.assign({},prev[sid]);
+      var oldRow=(prev[sid]&&prev[sid][catKey])||blankRow();
+      next[sid][catKey]=Object.assign({},oldRow,{[field]:val});
+      // track status changes
+      var nts=timestamps,nact=activity;
+      if(field==="status"&&val!==oldRow.status){
+        var tsKey=sid+":"+catKey;
+        nts=Object.assign({},timestamps,{[tsKey]:{status:val,at:nowISO(),prev:oldRow.status}});
+        setTimestamps(nts);
+        var storeName=(stores.find(function(s){return sk(s)===sid;})||{}).name||sid;
+        var catLabel=(CATS.find(function(c){return c.key===catKey;})||{}).label||catKey;
+        var entry={id:Date.now(),sid:sid,catKey:catKey,storeName:storeName,catLabel:catLabel,from:oldRow.status,to:val,at:nowISO()};
+        nact=[entry].concat(activity).slice(0,200);
+        setActivity(nact);
+      }
+      save(stores,next,notes,forms,nts,stuck,nact);
+      return next;
+    });
+  }
+
+  function toggleStuck(sid,catKey){
+    var key=sid+":"+catKey;
+    var next=Object.assign({},stuck,{[key]:!stuck[key]});
+    setStuck(next);
+    save(stores,rows,notes,forms,timestamps,next,activity);
+  }
+
+  function updStore(id,field,val){setStores(function(prev){var next=prev.map(function(s){return sk(s)===id?Object.assign({},s,{[field]:val}):s;});save(next,rows,notes,forms,timestamps,stuck,activity);return next;});}
+  function updNotes(sid,val){var next=Object.assign({},notes,{[sid]:val});setNotes(next);save(stores,rows,next,forms,timestamps,stuck,activity);}
+  function updForm(sid,field,val){setForms(function(prev){var next=Object.assign({},prev);next[sid]=Object.assign({},prev[sid]||{},{[field]:val});save(stores,rows,notes,next,timestamps,stuck,activity);return next;});}
 
   function addStoreHandler(){
     if(!newStore.name.trim())return;
     var ns2=stores.concat([Object.assign({},newStore)]);
     var nr=Object.assign({},rows);nr[sk(newStore)]={};CATS.forEach(function(c){nr[sk(newStore)][c.key]=blankRow();});
-    setStores(ns2);setRows(nr);save(ns2,nr,notes,forms);
+    setStores(ns2);setRows(nr);save(ns2,nr,notes,forms,timestamps,stuck,activity);
     setShowAdd(false);setNewStore({name:"",id:"",region:"East",cm:"",cs:"",ho:"",op:"",type:"new"});
   }
 
@@ -207,7 +284,11 @@ function App(){
     return list[0]||stores[0];
   },[stores,activeStore,filter,cat]);
 
-  var sid=sk(asd),days=du(asd.ho),urg=ul(days),aCats=gac(rows,sid),dCats=gdc(rows,sid);
+  var sid=asd?sk(asd):"";
+  var days=asd?du(asd.ho):null;
+  var urg=ul(days);
+  var aCats=sid?gac(rows,sid):[];
+  var dCats=sid?gdc(rows,sid):[];
   var allCMs=useMemo(function(){return[...new Set(stores.map(function(s){return s.cm;}).filter(Boolean))].sort();},[stores]);
   var counts={active:cat.active.length,refurb:cat.refurb.length,upcoming:cat.upcoming.length,complete:cat.complete.length,all:stores.length};
 
@@ -248,19 +329,57 @@ function App(){
     return{otm:otm,ar:ar,otr:otr,we:we,bm:bm,vl:vl,total:stores.length};
   },[stores,rows,cat]);
 
-  if(!ready)return e("div",{style:{padding:40,textAlign:"center",color:"#C8C6BE"}},"Loading...");
+  // Today view: items due or flagged this week across all stores
+  var todayItems=useMemo(function(){
+    var result=[];
+    var t=new Date();t.setHours(0,0,0,0);
+    var week=new Date(t);week.setDate(t.getDate()+7);
+    stores.forEach(function(s){
+      var sid2=sk(s);
+      CATS.forEach(function(c){
+        var row=(rows[sid2]&&rows[sid2][c.key])||blankRow();
+        if(row.na||DONE_S.indexOf(row.status)>-1)return;
+        var etaD=pd(row.eta);
+        var stk2=stuck[sid2+":"+c.key];
+        if(stk2||(etaD&&etaD>=t&&etaD<=week)||(etaD&&etaD<t)){
+          result.push({store:s,cat:c,row:row,sid2:sid2,etaD:etaD,isStuck:stk2,isOverdue:etaD&&etaD<t});
+        }
+      });
+    });
+    result.sort(function(a,b){
+      if(a.isOverdue&&!b.isOverdue)return-1;
+      if(!a.isOverdue&&b.isOverdue)return 1;
+      if(a.isStuck&&!b.isStuck)return-1;
+      if(!a.isStuck&&b.isStuck)return 1;
+      if(!a.etaD&&!b.etaD)return 0;
+      if(!a.etaD)return 1;
+      if(!b.etaD)return -1;
+      return a.etaD-b.etaD;
+    });
+    return result;
+  },[stores,rows,stuck]);
 
-  var iS=function(x){return Object.assign({fontSize:12,padding:"5px 10px",borderRadius:10,border:"1px solid "+PM,background:"#FDF5F8",outline:"none",color:"#444441",width:"100%"},x||{});};
+  if(!ready)return e("div",{style:{padding:40,textAlign:"center",color:"#C8C6BE",fontFamily:"DM Sans"}},"Loading...");
+
+  var iS=function(x){return Object.assign({fontSize:12,padding:"5px 10px",borderRadius:10,border:"1px solid "+PM,background:"#FDF5F8",outline:"none",color:"#444441",width:"100%",fontFamily:"DM Sans"},x||{});};
   var thS={padding:"10px 12px",textAlign:"left",fontSize:11,fontWeight:700,color:PD,borderBottom:"2px solid "+PM,whiteSpace:"nowrap",background:PL,cursor:"pointer"};
   var tdS={padding:"8px 12px",fontSize:12,color:"#444441",borderBottom:"1px solid #FDF5F8"};
 
   var fBtns=[["active","Active ("+counts.active+")"],["refurb","Active Refurb ("+counts.refurb+")"],["upcoming","Upcoming ("+counts.upcoming+")"],["complete","Completed ("+counts.complete+")"],["all","All ("+counts.all+")"]];
+
+  function filterBtns(clickFn,activeVal){
+    return fBtns.map(function(pair){
+      return e("button",{key:pair[0],onClick:function(){clickFn(pair[0]);},style:{fontSize:12,padding:"4px 12px",borderRadius:99,border:"1px solid "+(activeVal===pair[0]?PINK:PM),background:activeVal===pair[0]?PL:"#fff",color:activeVal===pair[0]?PINK:PD,cursor:"pointer",fontWeight:activeVal===pair[0]?600:400}},pair[1]);
+    });
+  }
 
   function filterClick(val){
     setFilter(val);
     var list=val==="active"?cat.active:val==="refurb"?cat.refurb:val==="upcoming"?cat.upcoming:val==="complete"?cat.complete:sob(cat.active.concat(cat.refurb).concat(cat.upcoming).concat(cat.complete));
     if(list[0])setActiveStore(sk(list[0]));
   }
+
+  function refurbBadge(){return e("span",{style:{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:99,background:"#EBF3FC",color:"#185FA5",border:"1px solid #85B7EB"}},"Refurb");}
 
   function exportCSV(){
     var lines=["Store,Region,CM,Scope,Vendor,Status,Action Owner,Tracking Info,Handover,Store Open,ETA,Notes"];
@@ -278,163 +397,202 @@ function App(){
     document.body.appendChild(a);a.click();document.body.removeChild(a);
     setTimeout(function(){URL.revokeObjectURL(url);},1000);
   }
-    return fBtns.map(function(pair){
-      return e("button",{key:pair[0],onClick:function(){clickFn(pair[0]);},style:{fontSize:12,padding:"4px 12px",borderRadius:99,border:"1px solid "+(activeVal===pair[0]?PINK:PM),background:activeVal===pair[0]?PL:"#fff",color:activeVal===pair[0]?PINK:PD,cursor:"pointer",fontWeight:activeVal===pair[0]?600:400}},pair[1]);
-    });
-  }
 
-  function refurbBadge(){return e("span",{style:{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:99,background:"#EBF3FC",color:"#185FA5",border:"1px solid #85B7EB"}},"Refurb");}
+  // NAV TABS
+  var navTabs=[["site","By Store"],["master","All Stores"],["vendor","By Vendor"],["pipeline","Pipeline"],["timeline","Timeline"],["activity","Activity"],["forms","Forms"],["dashboard","Dashboard"]];
 
-  var nav=e("div",{style:{background:"#fff",borderBottom:"1px solid "+PM,padding:"0 20px",display:"flex",alignItems:"center",justifyContent:"space-between",height:56,position:"sticky",top:0,zIndex:50}},
-    e("div",{style:{display:"flex",alignItems:"center",gap:10}},
-      e("div",{style:{width:28,height:28,borderRadius:8,background:PINK,display:"flex",alignItems:"center",justifyContent:"center"}},e("span",{style:{color:"#fff",fontSize:14,fontWeight:700}},"J")),
-      e("span",{style:{fontSize:14,fontWeight:600,color:PD}},"FF&E Tracker")
+  var nav=e("div",{style:{background:"#fff",borderBottom:"1px solid "+PM,padding:"0 16px",display:"flex",alignItems:"center",justifyContent:"space-between",height:52,position:"sticky",top:0,zIndex:50,gap:8}},
+    e("div",{style:{display:"flex",alignItems:"center",gap:8,flexShrink:0}},
+      e("div",{style:{width:26,height:26,borderRadius:7,background:PINK,display:"flex",alignItems:"center",justifyContent:"center"}},e("span",{style:{color:"#fff",fontSize:13,fontWeight:700}},"J")),
+      e("span",{style:{fontSize:13,fontWeight:700,color:PD,letterSpacing:"-0.3px"}},"FF&E Tracker")
     ),
-    e("div",{style:{display:"flex",alignItems:"center",gap:6}},
-      saveMsg?e("span",{style:{fontSize:12,color:"#1D9E75",background:"#E2F5EE",padding:"3px 10px",borderRadius:99}},saveMsg):null,
-      [["site","By Store"],["master","All Stores"],["vendor","By Vendor"],["pipeline","Pipeline"],["forms","Forms"],["dashboard","Dashboard"]].map(function(pair){
-        return e("button",{key:pair[0],onClick:function(){setView(pair[0]);},style:{fontSize:12,padding:"5px 12px",borderRadius:99,border:"1.5px solid "+(view===pair[0]?PINK:PM),background:view===pair[0]?PINK:"#fff",color:view===pair[0]?"#fff":PD,cursor:"pointer",fontWeight:view===pair[0]?600:400}},pair[1]);
+    e("div",{style:{display:"flex",alignItems:"center",gap:4,overflowX:"auto",flexShrink:1}},
+      navTabs.map(function(pair){
+        return e("button",{key:pair[0],onClick:function(){setView(pair[0]);},style:{fontSize:12,padding:"5px 11px",borderRadius:99,border:"1.5px solid "+(view===pair[0]?PINK:PM),background:view===pair[0]?PINK:"#fff",color:view===pair[0]?"#fff":PD,cursor:"pointer",fontWeight:view===pair[0]?600:400,whiteSpace:"nowrap",flexShrink:0}},pair[1]);
       })
+    ),
+    e("div",{style:{display:"flex",alignItems:"center",gap:8,flexShrink:0}},
+      saveMsg?e("span",{style:{fontSize:12,color:"#1D9E75",background:"#E2F5EE",padding:"3px 10px",borderRadius:99,whiteSpace:"nowrap"}},saveMsg):null
     )
   );
 
+  // Today Banner for By Store view
+  function todayBanner(storeSid){
+    var items=todayItems.filter(function(ti){return ti.sid2===storeSid;});
+    if(!items.length)return null;
+    return e("div",{style:{background:"#FEF4E6",border:"1px solid #EF9F27",borderRadius:14,padding:"10px 16px",marginBottom:12}},
+      e("div",{style:{fontSize:12,fontWeight:700,color:"#854F0B",marginBottom:6}},
+        "⚠️ "+items.length+" item"+(items.length>1?"s":"")+" need attention this week"
+      ),
+      e("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},
+        items.map(function(ti){
+          var sc=SCFG[ti.row.status]||SCFG["Not Started"];
+          return e("span",{key:ti.cat.key,style:{fontSize:11,padding:"2px 10px",borderRadius:99,background:sc.bg,color:sc.text,fontWeight:500}},
+            ti.cat.emoji+" "+ti.cat.label+(ti.etaD?" · "+fd(ti.row.eta):"")+(ti.isStuck?" 🚩":"")
+          );
+        })
+      )
+    );
+  }
+
   var content=null;
 
+  // ============ BY STORE VIEW ============
   if(view==="site"){
     var storeSelect=filtStores.length>0
-      ?e("select",{value:activeStore,onChange:function(ev){setActiveStore(ev.target.value);},style:{fontSize:13,padding:"6px 14px",borderRadius:99,border:"1.5px solid "+PM,color:PD,background:"#fff",fontWeight:600,cursor:"pointer",outline:"none",marginLeft:4}},filtStores.map(function(s){return e("option",{key:sk(s),value:sk(s)},s.name+(s.type==="refurb"?" (Refurb)":"")+(["active","refurb"].indexOf(gss(s,rows))>-1?" ★":""));}))
+      ?e("select",{value:activeStore,onChange:function(ev){setActiveStore(ev.target.value);},style:{fontSize:13,padding:"6px 14px",borderRadius:99,border:"1.5px solid "+PM,color:PD,background:"#fff",fontWeight:600,cursor:"pointer",outline:"none",marginLeft:4}},
+          filtStores.map(function(s){return e("option",{key:sk(s),value:sk(s)},s.name+(s.type==="refurb"?" (Refurb)":"")+(["active","refurb"].indexOf(gss(s,rows))>-1?" ★":""));}))
       :e("span",{style:{marginLeft:8,fontSize:13,color:"#C8C6BE",fontStyle:"italic"}},filter==="complete"?"No completed stores yet":"No stores here");
 
-    content=e("div",{style:{maxWidth:1100,margin:"0 auto",padding:"24px 20px"}},
-      e("div",{style:{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap",alignItems:"center"}},
+    content=e("div",{className:"fade-in",style:{maxWidth:1100,margin:"0 auto",padding:"20px 20px"}},
+      e("div",{style:{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap",alignItems:"center"}},
         e("span",{style:{fontSize:12,color:"#C8C6BE",fontWeight:500}},"Store"),
         filterBtns(filterClick,filter),
         storeSelect,
-        e("button",{onClick:function(){
-          var lines=["Store,Region,CM,Scope,Vendor,Status,Action Owner,Tracking Info,Handover,Store Open,ETA,Notes"];
-          stores.forEach(function(s){var sid2=sk(s);CATS.forEach(function(c){var row=(rows[sid2]&&rows[sid2][c.key])||blankRow();var v=row.vendorOverride||c.vendor(s.region);lines.push(['"'+s.name+'"',s.region,'"'+s.cm+'"',c.label,v,row.status,row.actionOwner,'"'+(row.trackingInfo||"").replace(/"/g,"'")+'"',s.ho||"TBD",s.op||"TBD",row.eta||"",'"'+(row.notes||"").replace(/"/g,"'")+'"'].join(","));});});
-          var blob=new Blob(["\uFEFF"+lines.join("\n")],{type:"text/csv;charset=utf-8;"});
-          var url=URL.createObjectURL(blob);
-          var a=document.createElement("a");a.href=url;a.download="JJ_Procurement.csv";
-          document.body.appendChild(a);a.click();document.body.removeChild(a);
-          setTimeout(function(){URL.revokeObjectURL(url);},1000);
-        },style:{fontSize:12,padding:"4px 12px",borderRadius:99,border:"1px solid "+PM,background:PL,color:PD,cursor:"pointer",fontWeight:500,marginLeft:"auto"}},"↓ Export CSV")
+        e("button",{onClick:exportCSV,style:{fontSize:12,padding:"4px 12px",borderRadius:99,border:"1px solid "+PM,background:PL,color:PD,cursor:"pointer",fontWeight:500,marginLeft:"auto"}},"↓ Export CSV")
       ),
       filter==="complete"&&cat.complete.length===0
-        ?e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,padding:"60px 24px",textAlign:"center"}},e("div",{style:{fontSize:40,marginBottom:16}},"🎉"),e("div",{style:{fontSize:18,fontWeight:700,color:PD,marginBottom:8}},"No completed stores yet"),e("div",{style:{fontSize:14,color:"#888780"}},"Stores appear here automatically when all FF&E items are marked done."))
+        ?e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,padding:"60px 24px",textAlign:"center"}},e("div",{style:{fontSize:40,marginBottom:16}},"🎉"),e("div",{style:{fontSize:18,fontWeight:700,color:PD,marginBottom:8}},"No completed stores yet"))
         :asd&&e(React.Fragment,null,
-          e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,padding:"20px 24px",marginBottom:16}},
-            e("div",{style:{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:12}},
+          // Today banner
+          todayBanner(sid),
+          // Store header
+          e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,padding:"18px 22px",marginBottom:12}},
+            e("div",{style:{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:10}},
               e("div",null,
-                e("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:8,flexWrap:"wrap"}},
-                  e("h1",{style:{fontSize:20,fontWeight:700,color:PD}},asd.name),
+                e("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}},
+                  e("h1",{style:{fontSize:19,fontWeight:700,color:PD,letterSpacing:"-0.3px"}},asd.name),
                   asd.type==="refurb"?refurbBadge():null,
                   e(Pill,{label:urg,cfg:UCFG[urg]})
                 ),
-                e("div",{style:{display:"flex",gap:16,flexWrap:"wrap"}},
-                  [["CM",asd.cm],["Region",asd.region],["Store ID",asd.id||"—"],["Construction Start",fd(asd.cs)],["Handover",fd(asd.ho)],["Store Open",fd(asd.op)]].map(function(p){return e("div",{key:p[0]},e("div",{style:{fontSize:11,color:"#C8C6BE",fontWeight:500,marginBottom:1}},p[0]),e("div",{style:{fontSize:13,fontWeight:600,color:PD}},p[1]));}),
-                  days!==null?e("div",null,e("div",{style:{fontSize:11,color:"#C8C6BE",fontWeight:500,marginBottom:1}},"Days Out"),e("div",{style:{fontSize:13,fontWeight:700,color:days<=7?"#A32D2D":days<=21?"#854F0B":PD}},days+"d")):null
+                e("div",{style:{display:"flex",gap:14,flexWrap:"wrap"}},
+                  [["CM",asd.cm],["Region",asd.region],["Store ID",asd.id||"—"],["Construction Start",fd(asd.cs)],["Handover",fd(asd.ho)],["Store Open",fd(asd.op)]].map(function(p){return e("div",{key:p[0]},e("div",{style:{fontSize:10,color:"#C8C6BE",fontWeight:600,marginBottom:1,textTransform:"uppercase",letterSpacing:"0.4px"}},p[0]),e("div",{style:{fontSize:13,fontWeight:600,color:PD}},p[1]));}),
+                  days!==null?e("div",null,e("div",{style:{fontSize:10,color:"#C8C6BE",fontWeight:600,marginBottom:1,textTransform:"uppercase",letterSpacing:"0.4px"}},"Days Out"),e("div",{style:{fontSize:13,fontWeight:700,color:days<=7?"#A32D2D":days<=21?"#854F0B":PD}},days+"d")):null
                 )
               ),
-              e("div",{style:{display:"flex",alignItems:"center",gap:12}},
+              e("div",{style:{display:"flex",alignItems:"center",gap:10}},
                 isc(rows,sid)?e("div",{style:{background:"#E2F5EE",borderRadius:99,padding:"4px 12px"}},e("span",{style:{fontSize:12,fontWeight:600,color:"#0F6E56"}},"✓ Complete")):null,
-                e("div",{style:{textAlign:"center"}},e("div",{style:{fontSize:22,fontWeight:700,color:dCats.length===aCats.length&&aCats.length>0?"#0F6E56":PINK}},dCats.length+"/"+aCats.length),e("div",{style:{fontSize:11,color:"#C8C6BE"}},"complete")),
+                e("div",{style:{textAlign:"center"}},e("div",{style:{fontSize:22,fontWeight:700,color:dCats.length===aCats.length&&aCats.length>0?"#0F6E56":PINK}},dCats.length+"/"+aCats.length),e("div",{style:{fontSize:10,color:"#C8C6BE",textTransform:"uppercase",letterSpacing:"0.4px"}},"complete")),
                 e("button",{onClick:function(){setEditing(!editing);},style:{fontSize:12,padding:"6px 14px",borderRadius:99,border:"1px solid "+PM,background:editing?PINK:"#fff",color:editing?"#fff":PD,cursor:"pointer"}},editing?"Done":"Edit Details")
               )
             ),
-            editing?e("div",{style:{marginTop:16,paddingTop:16,borderTop:"1px solid "+PM,display:"flex",gap:12,flexWrap:"wrap"}},
+            editing?e("div",{style:{marginTop:14,paddingTop:14,borderTop:"1px solid "+PM,display:"flex",gap:12,flexWrap:"wrap"}},
               [["Construction Start","cs","date"],["Handover","ho","date"],["Store Open","op","date"],["CM","cm","text"],["Store ID","id","text"],["Region","region","text"]].map(function(t){
-                return e("div",{key:t[1]},e("div",{style:{fontSize:11,color:"#C8C6BE",marginBottom:4}},t[0]),e("input",{type:t[2],value:asd[t[1]]||"",onChange:function(ev){updStore(sid,t[1],ev.target.value);},style:{fontSize:13,padding:"6px 12px",borderRadius:10,border:"1px solid "+PM,outline:"none",background:"#FDF5F8",width:t[1]==="id"||t[1]==="region"?100:160}}));
+                return e("div",{key:t[1]},e("div",{style:{fontSize:10,color:"#C8C6BE",marginBottom:4,textTransform:"uppercase",letterSpacing:"0.4px"}},t[0]),e("input",{type:t[2],value:asd[t[1]]||"",onChange:function(ev){updStore(sid,t[1],ev.target.value);},style:{fontSize:13,padding:"6px 12px",borderRadius:10,border:"1px solid "+PM,outline:"none",background:"#FDF5F8",width:t[1]==="id"||t[1]==="region"?100:160}}));
               })
             ):null
           ),
-          e("div",{style:{display:"flex",flexDirection:"column",gap:10,marginBottom:16}},
+          // Cat rows
+          e("div",{style:{display:"flex",flexDirection:"column",gap:8,marginBottom:12}},
             CATS.map(function(cat2){
               var row=(rows[sid]&&rows[sid][cat2.key])||blankRow();
               var sc=SCFG[row.status]||SCFG["Not Started"];
               var vendor=row.vendorOverride||cat2.vendor(asd.region);
               var risk=DONE_S.indexOf(row.status)>-1?null:er(row.eta,asd.ho);
               var ec=risk?ECFG[risk]:null;
-              return e("div",{key:cat2.key,style:{background:row.na?"#F9F9F9":"#fff",borderRadius:16,border:"1px solid "+(row.na?"#E8E6DF":PM),padding:"14px 20px",opacity:row.na?0.5:1}},
-                e("div",{style:{display:"grid",gridTemplateColumns:"170px 140px 90px 1fr 110px auto auto",gap:10,alignItems:"center"}},
-                  e("div",{style:{display:"flex",alignItems:"center",gap:8}},e("span",{style:{fontSize:16}},cat2.emoji),e("span",{style:{fontSize:14,fontWeight:600,color:row.na?"#C8C6BE":PD}},cat2.label)),
+              var tsKey=sid+":"+cat2.key;
+              var tsInfo=timestamps[tsKey];
+              var isStuckFlag=stuck[tsKey];
+              return e("div",{key:cat2.key,style:{background:row.na?"#F9F9F9":"#fff",borderRadius:14,border:"1px solid "+(isStuckFlag?"#EF9F27":row.na?"#E8E6DF":PM),padding:"12px 18px",opacity:row.na?0.5:1}},
+                e("div",{style:{display:"grid",gridTemplateColumns:"160px 140px 88px 1fr 108px 32px 32px",gap:8,alignItems:"center"}},
+                  e("div",{style:{display:"flex",alignItems:"center",gap:6}},
+                    e("span",{style:{fontSize:15}},cat2.emoji),
+                    e("div",null,
+                      e("span",{style:{fontSize:13,fontWeight:600,color:row.na?"#C8C6BE":PD}},cat2.label),
+                      tsInfo&&DONE_S.indexOf(tsInfo.status)>-1?e("div",{style:{fontSize:10,color:"#1D9E75",fontFamily:"DM Mono",marginTop:1}},
+                        "→ "+fts(tsInfo.at)):null
+                    )
+                  ),
                   e("input",{value:vendor,onChange:function(ev){updRow(sid,cat2.key,"vendorOverride",ev.target.value);},disabled:row.na,style:iS({border:"1px solid "+(row.vendorOverride?"#EF9F27":PM),background:row.vendorOverride?"#FEF4E6":"#FDF5F8",color:row.vendorOverride?"#854F0B":"#5F5E5A"})}),
                   e("select",{value:row.actionOwner||"J&TJ",onChange:function(ev){updRow(sid,cat2.key,"actionOwner",ev.target.value);},disabled:row.na,style:iS()},["J&TJ","Vendor","CM"].map(function(o){return e("option",{key:o},o);})),
                   e("input",{value:row.trackingInfo||"",onChange:function(ev){updRow(sid,cat2.key,"trackingInfo",ev.target.value);},placeholder:"Tracking, install notes...",disabled:row.na,style:iS()}),
-                  e("select",{value:row.status||"Not Started",onChange:function(ev){updRow(sid,cat2.key,"status",ev.target.value);},disabled:row.na,style:{fontSize:12,padding:"5px 10px",borderRadius:10,border:"1px solid "+sc.dot,background:sc.bg,color:sc.text,fontWeight:600,outline:"none",width:"100%"}},STATUSES.map(function(s){return e("option",{key:s},s);})),
-                  e("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",gap:3,minWidth:130}},
-                    e("div",{style:{display:"flex",alignItems:"center",gap:6}},
-                      e("span",{style:{fontSize:11,color:"#C8C6BE",whiteSpace:"nowrap"}},"ETA"),
-                      e("input",{type:"date",value:row.eta||"",onChange:function(ev){updRow(sid,cat2.key,"eta",ev.target.value);},disabled:row.na,style:{fontSize:11,padding:"4px 8px",borderRadius:10,border:"1px solid "+(ec?ec.border:PM),background:ec?ec.bg:"#FDF5F8",color:ec?ec.text:"#888780",outline:"none",width:120}})
+                  e("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",gap:2,minWidth:108}},
+                    e("div",{style:{display:"flex",alignItems:"center",gap:4}},
+                      e("input",{type:"date",value:row.eta||"",onChange:function(ev){updRow(sid,cat2.key,"eta",ev.target.value);},disabled:row.na,style:{fontSize:11,padding:"4px 6px",borderRadius:8,border:"1px solid "+(ec?ec.border:PM),background:ec?ec.bg:"#FDF5F8",color:ec?ec.text:"#888780",outline:"none",width:108}})
                     ),
-                    ec?e("span",{style:{fontSize:10,fontWeight:600,color:ec.text,whiteSpace:"nowrap"}},ec.label):null
+                    ec?e("span",{style:{fontSize:10,fontWeight:600,color:ec.text,whiteSpace:"nowrap"}},ec.label):null,
+                    e("select",{value:row.status||"Not Started",onChange:function(ev){updRow(sid,cat2.key,"status",ev.target.value);},disabled:row.na,style:{fontSize:11,padding:"4px 6px",borderRadius:8,border:"1px solid "+sc.dot,background:sc.bg,color:sc.text,fontWeight:600,outline:"none",width:"100%",marginTop:3}},STATUSES.map(function(s){return e("option",{key:s},s);}))
                   ),
-                  e("button",{onClick:function(){updRow(sid,cat2.key,"na",!row.na);},style:{fontSize:11,padding:"5px 12px",borderRadius:99,border:"1.5px solid "+(row.na?"#C8C6BE":PM),background:row.na?"#F5F4F1":"#fff",color:row.na?"#888780":PD,cursor:"pointer",fontWeight:row.na?600:400,whiteSpace:"nowrap"}},row.na?"↩":"N/A")
-                )
+                  e("button",{
+                    title:isStuckFlag?"Clear Stuck flag":"Mark as Stuck / Blocked",
+                    onClick:function(){toggleStuck(sid,cat2.key);},
+                    style:{fontSize:14,padding:"4px",borderRadius:8,border:"1.5px solid "+(isStuckFlag?"#EF9F27":"#E8E6DF"),background:isStuckFlag?"#FEF4E6":"transparent",cursor:"pointer",lineHeight:1,color:isStuckFlag?"#854F0B":"#C8C6BE"}
+                  },"🚩"),
+                  e("button",{onClick:function(){updRow(sid,cat2.key,"na",!row.na);},style:{fontSize:11,padding:"4px 8px",borderRadius:8,border:"1.5px solid "+(row.na?"#C8C6BE":PM),background:row.na?"#F5F4F1":"transparent",color:row.na?"#888780":PD,cursor:"pointer",fontWeight:row.na?600:400,whiteSpace:"nowrap"}},row.na?"↩":"N/A")
+                ),
+                // Item-level notes inline
+                !row.na?e("div",{style:{marginTop:8,paddingTop:8,borderTop:"1px dashed #F0EBF0"}},
+                  e("input",{value:row.notes||"",onChange:function(ev){updRow(sid,cat2.key,"notes",ev.target.value);},placeholder:"Notes...",disabled:row.na,style:iS({fontSize:11,color:"#888780",background:"transparent",border:"none",padding:"0",borderRadius:0})})
+                ):null
               );
             })
           ),
-          e("div",{style:{display:"flex",flexDirection:"column",gap:6,marginBottom:16}},
-            CATS.filter(function(c){return!rows[sid]||!rows[sid][c.key]||!rows[sid][c.key].na;}).map(function(c){
-              var row=(rows[sid]&&rows[sid][c.key])||blankRow();
-              return e("div",{key:c.key,style:{display:"grid",gridTemplateColumns:"190px 1fr",gap:12,alignItems:"center",padding:"0 20px"}},
-                e("span",{style:{fontSize:12,color:PD,fontWeight:600}},c.label+" notes"),
-                e("input",{value:row.notes||"",onChange:function(ev){updRow(sid,c.key,"notes",ev.target.value);},placeholder:"Add a note...",style:{fontSize:12,padding:"6px 12px",borderRadius:10,border:"1px solid "+PM,background:"#fff",outline:"none",color:"#444441"}})
-              );
-            })
-          ),
-          e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,padding:"20px 24px"}},
-            e("div",{style:{fontSize:13,fontWeight:600,color:PD,marginBottom:10}},"Additional Notes"),
-            e("textarea",{value:notes[sid]||"",onChange:function(ev){updNotes(sid,ev.target.value);},placeholder:"Permits, GC notes, flagged items...",rows:5,style:{width:"100%",fontSize:13,padding:"10px 14px",borderRadius:12,border:"1px solid "+PM,background:"#FDF5F8",outline:"none",color:"#444441",resize:"vertical",lineHeight:1.6}})
+          // Additional Notes
+          e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,padding:"18px 22px"}},
+            e("div",{style:{fontSize:13,fontWeight:600,color:PD,marginBottom:8}},"Additional Notes"),
+            e("textarea",{value:notes[sid]||"",onChange:function(ev){updNotes(sid,ev.target.value);},placeholder:"Permits, GC notes, flagged items...",rows:4,style:{width:"100%",fontSize:13,padding:"10px 14px",borderRadius:12,border:"1px solid "+PM,background:"#FDF5F8",outline:"none",color:"#444441",resize:"vertical",lineHeight:1.6}})
           )
         )
     );
   }
 
+  // ============ ALL STORES ============
   if(view==="master"){
-    content=e("div",{style:{maxWidth:1100,margin:"0 auto",padding:"24px 20px"}},
-      e("div",{style:{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}},filterBtns(function(v){setFilter(v);},filter)),
+    content=e("div",{className:"fade-in",style:{maxWidth:1100,margin:"0 auto",padding:"20px 20px"}},
+      e("div",{style:{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}},filterBtns(function(v){setFilter(v);},filter)),
       filtStores.length===0
         ?e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,padding:"60px 24px",textAlign:"center"}},e("div",{style:{fontSize:40,marginBottom:16}},"🎉"),e("div",{style:{fontSize:18,fontWeight:700,color:PD,marginBottom:8}},"No completed stores yet"))
-        :e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}},
+        :e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(270px,1fr))",gap:12}},
           filtStores.map(function(s){
-            var sid2=sk(s),d=du(s.ho),u=ul(d),ac2=gac(rows,sid2),dc2=gdc(rows,sid2),pct=ac2.length?Math.round((dc2.length/ac2.length)*100):0,comp=isc(rows,sid2),score=comp?ss2(s,rows):null;
-            return e("div",{key:sid2,onClick:function(){setActiveStore(sid2);setFilter(comp?"complete":s.type==="refurb"?"refurb":gss(s,rows)==="active"?"active":"upcoming");setView("site");},style:{background:"#fff",borderRadius:18,border:"1px solid "+(comp?"#1D9E75":PM),padding:"18px 20px",cursor:"pointer"}},
-              e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8,gap:8}},
-                e("div",null,e("div",{style:{fontSize:14,fontWeight:700,color:PD}},s.name),s.type==="refurb"?refurbBadge():null),
-                e(Pill,{label:u,cfg:UCFG[u]})
+            var sid2=sk(s),d=du(s.ho),u=ul(d),ac2=gac(rows,sid2),dc2=gdc(rows,sid2),pct=ac2.length?Math.round((dc2.length/ac2.length)*100):0,comp=isc(rows,sid2);
+            var conf=sco(s,rows),ccfg=CCFG[conf];
+            var stuckCount=CATS.filter(function(c){return stuck[sid2+":"+c.key];}).length;
+            return e("div",{key:sid2,onClick:function(){setActiveStore(sid2);setFilter(comp?"complete":s.type==="refurb"?"refurb":gss(s,rows)==="active"?"active":"upcoming");setView("site");},style:{background:"#fff",borderRadius:16,border:"1px solid "+(comp?"#1D9E75":PM),padding:"16px 18px",cursor:"pointer"}},
+              e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6,gap:6}},
+                e("div",null,
+                  e("div",{style:{fontSize:14,fontWeight:700,color:PD,lineHeight:1.2}},s.name),
+                  s.type==="refurb"?e("div",{style:{marginTop:3}},refurbBadge()):null
+                ),
+                e("div",{style:{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}},
+                  e(Pill,{label:u,cfg:UCFG[u]}),
+                  !comp?e("span",{style:{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:99,background:ccfg.bg,color:ccfg.text}},ccfg.label):null
+                )
               ),
-              e("div",{style:{fontSize:12,color:"#888780",marginBottom:12}},s.cm+" · "+s.region+" · "+fd(s.op||s.ho)),
-              e("div",{style:{background:PL,borderRadius:99,height:6,marginBottom:6}},e("div",{style:{background:comp?"#1D9E75":PINK,borderRadius:99,height:6,width:pct+"%"}})),
-              e("div",{style:{fontSize:12,color:"#C8C6BE"}},dc2.length+" of "+ac2.length+" complete"+(ac2.length<CATS.length?" · "+(CATS.length-ac2.length)+" N/A":"")+(comp?" · ✓":""))
+              e("div",{style:{fontSize:11,color:"#888780",marginBottom:10}},s.cm+" · "+s.region+" · "+fd(s.op||s.ho)),
+              e("div",{style:{background:PL,borderRadius:99,height:5,marginBottom:4}},e("div",{style:{background:comp?"#1D9E75":PINK,borderRadius:99,height:5,width:pct+"%",transition:"width 0.3s"}})),
+              e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+                e("div",{style:{fontSize:11,color:"#C8C6BE"}},dc2.length+" of "+ac2.length+" complete"),
+                stuckCount>0?e("span",{style:{fontSize:10,fontWeight:600,color:"#854F0B"}},"🚩 "+stuckCount+" stuck"):null
+              )
             );
           })
         )
     );
   }
 
+  // ============ BY VENDOR ============
   if(view==="vendor"){
     var vendors=[...new Set(CATS.map(function(c){return c.vendor("East");}).concat(CATS.map(function(c){return c.vendor("West");})))].sort();
-    content=e("div",{style:{maxWidth:1100,margin:"0 auto",padding:"24px 20px"}},
-      e("div",{style:{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}},filterBtns(function(v){setFilter(v);},filter)),
+    content=e("div",{className:"fade-in",style:{maxWidth:1100,margin:"0 auto",padding:"20px 20px"}},
+      e("div",{style:{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}},filterBtns(function(v){setFilter(v);},filter)),
       vendors.map(function(vendor){
         var vrows=[];
         filtStores.forEach(function(s){var sid2=sk(s);CATS.forEach(function(c){var row=(rows[sid2]&&rows[sid2][c.key])||blankRow();if(row.na)return;var v=row.vendorOverride||c.vendor(s.region);if(v===vendor)vrows.push({store:s,cat:c,row:row,days:du(s.ho),sid2:sid2});});});
         if(!vrows.length)return null;
         var open=vrows.filter(function(r){return DONE_S.indexOf(r.row.status)===-1;}).length;
-        return e("div",{key:vendor,style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,marginBottom:16,overflow:"hidden"}},
-          e("div",{style:{padding:"14px 20px",borderBottom:"1px solid "+PM,display:"flex",alignItems:"center",justifyContent:"space-between"}},
-            e("span",{style:{fontSize:15,fontWeight:700,color:PD}},vendor),
+        return e("div",{key:vendor,style:{background:"#fff",borderRadius:18,border:"1px solid "+PM,marginBottom:14,overflow:"hidden"}},
+          e("div",{style:{padding:"12px 18px",borderBottom:"1px solid "+PM,display:"flex",alignItems:"center",justifyContent:"space-between"}},
+            e("span",{style:{fontSize:14,fontWeight:700,color:PD}},vendor),
             e("div",{style:{display:"flex",gap:8}},e("span",{style:{fontSize:12,color:"#C8C6BE"}},vrows.length+" items"),open>0?e("span",{style:{fontSize:12,padding:"2px 10px",borderRadius:99,background:"#FEF4E6",color:"#854F0B",fontWeight:500}},open+" open"):null)
           ),
-          e("div",{style:{padding:"8px 0"}},
+          e("div",{style:{padding:"4px 0"}},
             vrows.map(function(vr){
               var sc2=SCFG[vr.row.status]||SCFG["Not Started"],u2=ul(vr.days);
-              return e("div",{key:vr.sid2+"-"+vr.cat.key,style:{display:"grid",gridTemplateColumns:"200px 130px 1fr 150px 110px",gap:10,alignItems:"center",padding:"10px 20px",borderBottom:"1px solid #FDF5F8"}},
-                e("div",null,e("div",{style:{display:"flex",alignItems:"center",gap:6}},e("span",{style:{fontSize:13,fontWeight:600,color:PD}},vr.store.name),vr.store.type==="refurb"?e("span",{style:{fontSize:10,padding:"1px 6px",borderRadius:99,background:"#EBF3FC",color:"#185FA5"}},"R"):null),e("div",{style:{fontSize:11,color:"#C8C6BE"}},vr.cat.label)),
-                e("input",{value:vr.row.trackingInfo||"",onChange:function(ev){updRow(vr.sid2,vr.cat.key,"trackingInfo",ev.target.value);},placeholder:"ETA...",style:{fontSize:12,padding:"5px 10px",borderRadius:10,border:"1px solid "+PM,background:"#FDF5F8",outline:"none",color:"#444441",width:"100%"}}),
-                e("input",{value:vr.row.notes||"",onChange:function(ev){updRow(vr.sid2,vr.cat.key,"notes",ev.target.value);},placeholder:"Notes...",style:{fontSize:12,padding:"5px 10px",borderRadius:10,border:"1px solid "+PM,background:"#FDF5F8",outline:"none",color:"#444441",width:"100%"}}),
-                e("select",{value:vr.row.status||"Not Started",onChange:function(ev){updRow(vr.sid2,vr.cat.key,"status",ev.target.value);},style:{fontSize:12,padding:"5px 8px",borderRadius:10,border:"1px solid "+sc2.dot,background:sc2.bg,color:sc2.text,fontWeight:600,outline:"none",width:"100%"}},STATUSES.map(function(s){return e("option",{key:s},s);})),
+              return e("div",{key:vr.sid2+"-"+vr.cat.key,style:{display:"grid",gridTemplateColumns:"190px 130px 1fr 150px 110px",gap:8,alignItems:"center",padding:"8px 18px",borderBottom:"1px solid #FDF5F8"}},
+                e("div",null,e("div",{style:{display:"flex",alignItems:"center",gap:5}},e("span",{style:{fontSize:13,fontWeight:600,color:PD}},vr.store.name),vr.store.type==="refurb"?e("span",{style:{fontSize:10,padding:"1px 6px",borderRadius:99,background:"#EBF3FC",color:"#185FA5"}},"R"):null),e("div",{style:{fontSize:11,color:"#C8C6BE"}},vr.cat.label)),
+                e("input",{value:vr.row.trackingInfo||"",onChange:function(ev){updRow(vr.sid2,vr.cat.key,"trackingInfo",ev.target.value);},placeholder:"ETA / tracking...",style:{fontSize:12,padding:"5px 8px",borderRadius:8,border:"1px solid "+PM,background:"#FDF5F8",outline:"none",color:"#444441",width:"100%"}}),
+                e("input",{value:vr.row.notes||"",onChange:function(ev){updRow(vr.sid2,vr.cat.key,"notes",ev.target.value);},placeholder:"Notes...",style:{fontSize:12,padding:"5px 8px",borderRadius:8,border:"1px solid "+PM,background:"#FDF5F8",outline:"none",color:"#444441",width:"100%"}}),
+                e("select",{value:vr.row.status||"Not Started",onChange:function(ev){updRow(vr.sid2,vr.cat.key,"status",ev.target.value);},style:{fontSize:12,padding:"5px 8px",borderRadius:8,border:"1px solid "+sc2.dot,background:sc2.bg,color:sc2.text,fontWeight:600,outline:"none",width:"100%"}},STATUSES.map(function(s){return e("option",{key:s},s);})),
                 e(Pill,{label:u2,cfg:UCFG[u2]})
               );
             })
@@ -444,14 +602,15 @@ function App(){
     );
   }
 
+  // ============ PIPELINE ============
   if(view==="pipeline"){
     var cols=[["name","Store Name"],["id","Store ID"],["type","Type"],["region","Region"],["cm","CM"],["cs","Construction Start"],["ho","Handover"],["op","Store Open"],["status","Status"]];
-    content=e("div",{style:{maxWidth:1200,margin:"0 auto",padding:"24px 20px"}},
-      e("div",{style:{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap",alignItems:"center"}},
+    content=e("div",{className:"fade-in",style:{maxWidth:1200,margin:"0 auto",padding:"20px 20px"}},
+      e("div",{style:{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap",alignItems:"center"}},
         e("span",{style:{fontSize:12,color:"#C8C6BE",fontWeight:500}},"Filter"),
         e("div",{style:{position:"relative",display:"flex",alignItems:"center"}},
-          e("span",{style:{position:"absolute",left:10,fontSize:13,color:"#C8C6BE"}},"🔍"),
-          e("input",{value:plSearch,onChange:function(ev){setPlSearch(ev.target.value);},placeholder:"Search store, ID, CM...",style:{fontSize:12,padding:"5px 12px 5px 30px",borderRadius:99,border:"1px solid "+PM,background:"#fff",color:"#444441",outline:"none",width:210}}),
+          e("span",{style:{position:"absolute",left:10,fontSize:12,color:"#C8C6BE"}},"🔍"),
+          e("input",{value:plSearch,onChange:function(ev){setPlSearch(ev.target.value);},placeholder:"Search store, ID, CM...",style:{fontSize:12,padding:"5px 12px 5px 28px",borderRadius:99,border:"1px solid "+PM,background:"#fff",color:"#444441",outline:"none",width:200}}),
           plSearch?e("button",{onClick:function(){setPlSearch("");},style:{position:"absolute",right:8,fontSize:12,color:"#C8C6BE",background:"none",border:"none",cursor:"pointer"}},"✕"):null
         ),
         [["region",["All","East","West"]],["cm",["All"].concat(allCMs)],["type",[["All","All Types"],["new","New Build"],["refurb","Refurb"]]],["status",[["All","All Status"],["active","Active"],["refurb","Active Refurb"],["upcoming","Upcoming"],["complete","Complete"]]]].map(function(kv){
@@ -461,7 +620,7 @@ function App(){
         e("span",{style:{fontSize:12,color:"#C8C6BE"}},plStores.length+" stores"),
         e("button",{onClick:function(){setShowAdd(true);},style:{marginLeft:"auto",fontSize:12,padding:"6px 16px",borderRadius:99,border:"none",background:PINK,color:"#fff",cursor:"pointer",fontWeight:600}},"+ Add Store")
       ),
-      e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,overflow:"hidden"}},
+      e("div",{style:{background:"#fff",borderRadius:18,border:"1px solid "+PM,overflow:"hidden"}},
         e("div",{style:{overflowX:"auto"}},
           e("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:12}},
             e("thead",null,e("tr",null,cols.map(function(col){return e("th",{key:col[0],style:thS,onClick:col[0]!=="status"?function(){setPlSort(function(p){return{col:col[0],dir:p.col===col[0]&&p.dir==="asc"?"desc":"asc"};});}:undefined},col[1],col[0]!=="status"?e("span",{style:{color:plSort.col===col[0]?PINK:"#C8C6BE",marginLeft:4}},plSort.col===col[0]?(plSort.dir==="asc"?"↑":"↓"):"↕"):null);}))),
@@ -485,37 +644,129 @@ function App(){
     );
   }
 
+  // ============ TIMELINE VIEW ============
+  if(view==="timeline"){
+    // Horizontal Gantt-style: active stores sorted by handover, each row = one store
+    var tlStores=sob(cat.active.concat(cat.refurb).concat(cat.upcoming));
+    var today2=new Date();today2.setHours(0,0,0,0);
+    // Find date range
+    var minD=new Date(today2);minD.setDate(minD.getDate()-30);
+    var maxD=new Date(today2);maxD.setDate(maxD.getDate()+365);
+    // Compute months for header
+    var months=[];
+    var cur=new Date(minD.getFullYear(),minD.getMonth(),1);
+    while(cur<=maxD){months.push(new Date(cur));cur.setMonth(cur.getMonth()+1);}
+    var totalDays=Math.ceil((maxD-minD)/86400000);
+    function pct2(d){if(!d)return null;var diff=Math.ceil((d-minD)/86400000);return Math.max(0,Math.min(100,(diff/totalDays)*100));}
+    function todayPct(){return pct2(today2);}
+    content=e("div",{className:"fade-in",style:{maxWidth:1300,margin:"0 auto",padding:"20px 20px"}},
+      e("div",{style:{fontSize:13,color:"#888780",marginBottom:12}},
+        "Timeline view of "+tlStores.length+" active/upcoming stores. Bars show construction start → handover → open date."
+      ),
+      e("div",{style:{background:"#fff",borderRadius:18,border:"1px solid "+PM,overflow:"hidden"}},
+        // Month header
+        e("div",{style:{display:"flex",borderBottom:"2px solid "+PM,background:PL}},
+          e("div",{style:{minWidth:200,flexShrink:0,padding:"8px 14px",fontSize:11,fontWeight:700,color:PD,borderRight:"1px solid "+PM}},"Store"),
+          e("div",{style:{flex:1,position:"relative",height:30,overflowX:"hidden"}},
+            months.map(function(m,i){
+              var mp=pct2(m);
+              if(mp===null)return null;
+              return e("div",{key:i,style:{position:"absolute",left:mp+"%",fontSize:10,fontWeight:600,color:"#888780",whiteSpace:"nowrap",top:9}},
+                m.toLocaleDateString("en-US",{month:"short",year:"2-digit"})
+              );
+            })
+          )
+        ),
+        e("div",{style:{overflowY:"auto",maxHeight:"70vh"}},
+          tlStores.map(function(s,i){
+            var csP=pct2(pd(s.cs)),hoP=pct2(pd(s.ho)),opP=pct2(pd(s.op));
+            var st=gss(s,rows),conf=sco(s,rows),ccfg=CCFG[conf];
+            return e("div",{key:sk(s),style:{display:"flex",borderBottom:"1px solid #FDF5F8",background:i%2===0?"#fff":"#FDFBFC",alignItems:"center"},
+              onClick:function(){setActiveStore(sk(s));setView("site");setFilter(st==="refurb"?"refurb":st==="active"?"active":"upcoming");}},
+              // Store name
+              e("div",{style:{minWidth:200,flexShrink:0,padding:"8px 14px",borderRight:"1px solid "+PM,cursor:"pointer"}},
+                e("div",{style:{fontSize:12,fontWeight:700,color:PD}},s.name),
+                e("div",{style:{fontSize:10,color:"#888780"}},s.cm),
+                e("span",{style:{fontSize:10,fontWeight:600,padding:"1px 7px",borderRadius:99,background:ccfg.bg,color:ccfg.text}},ccfg.label)
+              ),
+              // Bar area
+              e("div",{style:{flex:1,height:40,position:"relative"}},
+                // Today line
+                e("div",{style:{position:"absolute",left:todayPct()+"%",top:0,bottom:0,width:1,background:PINK,opacity:0.5,zIndex:2}}),
+                // CS → HO bar
+                csP!==null&&hoP!==null?e("div",{style:{position:"absolute",left:Math.min(csP,hoP)+"%",width:Math.abs(hoP-csP)+"%",top:12,height:10,background:PM,borderRadius:5,zIndex:1}}):null,
+                // HO → OP bar
+                hoP!==null&&opP!==null?e("div",{style:{position:"absolute",left:Math.min(hoP,opP)+"%",width:Math.abs(opP-hoP)+"%",top:12,height:10,background:PINK,borderRadius:5,opacity:0.7,zIndex:1}}):null,
+                // Dots
+                csP!==null?e("div",{title:"Construction Start: "+fd(s.cs),style:{position:"absolute",left:csP+"%",top:10,width:14,height:14,borderRadius:"50%",background:"#C8C6BE",border:"2px solid #fff",zIndex:3,transform:"translateX(-7px)"}}):null,
+                hoP!==null?e("div",{title:"Handover: "+fd(s.ho),style:{position:"absolute",left:hoP+"%",top:10,width:14,height:14,borderRadius:"50%",background:PD,border:"2px solid #fff",zIndex:3,transform:"translateX(-7px)"}}):null,
+                opP!==null?e("div",{title:"Store Open: "+fd(s.op),style:{position:"absolute",left:opP+"%",top:10,width:14,height:14,borderRadius:"50%",background:"#1D9E75",border:"2px solid #fff",zIndex:3,transform:"translateX(-7px)"}}):null
+              )
+            );
+          })
+        )
+      ),
+      e("div",{style:{display:"flex",gap:14,marginTop:10,fontSize:11,color:"#888780",alignItems:"center"}},
+        e("div",{style:{display:"flex",alignItems:"center",gap:4}},e("div",{style:{width:12,height:12,borderRadius:"50%",background:"#C8C6BE"}}),e("span","CS")),
+        e("div",{style:{display:"flex",alignItems:"center",gap:4}},e("div",{style:{width:24,height:7,background:PM,borderRadius:3}}),e("span","CS→HO")),
+        e("div",{style:{display:"flex",alignItems:"center",gap:4}},e("div",{style:{width:12,height:12,borderRadius:"50%",background:PD}}),e("span","Handover")),
+        e("div",{style:{display:"flex",alignItems:"center",gap:4}},e("div",{style:{width:24,height:7,background:PINK,borderRadius:3,opacity:0.7}}),e("span","HO→Open")),
+        e("div",{style:{display:"flex",alignItems:"center",gap:4}},e("div",{style:{width:12,height:12,borderRadius:"50%",background:"#1D9E75"}}),e("span","Open")),
+        e("div",{style:{display:"flex",alignItems:"center",gap:4}},e("div",{style:{width:1,height:16,background:PINK,opacity:0.5}}),e("span","Today"))
+      )
+    );
+  }
+
+  // ============ ACTIVITY VIEW ============
+  if(view==="activity"){
+    content=e("div",{className:"fade-in",style:{maxWidth:800,margin:"0 auto",padding:"20px 20px"}},
+      e("div",{style:{fontSize:14,fontWeight:700,color:PD,marginBottom:4}},"Activity Log"),
+      e("div",{style:{fontSize:12,color:"#888780",marginBottom:16}},"Chronological feed of all status changes across stores."),
+      activity.length===0
+        ?e("div",{style:{background:"#fff",borderRadius:18,border:"1px solid "+PM,padding:"40px",textAlign:"center",color:"#C8C6BE",fontSize:13}},"No activity yet. Status changes will appear here.")
+        :e("div",{style:{display:"flex",flexDirection:"column",gap:1}},
+          activity.map(function(entry,i){
+            var sc_from=SCFG[entry.from]||SCFG["Not Started"];
+            var sc_to=SCFG[entry.to]||SCFG["Not Started"];
+            return e("div",{key:entry.id,style:{background:i===0?"#fff":"#fff",borderRadius:i===0?14:10,border:"1px solid "+(i===0?PM:"#F0EBF0"),padding:"10px 16px",display:"flex",alignItems:"center",gap:10,marginBottom:i===0?4:2}},
+              e("div",{style:{fontSize:14,flexShrink:0}},CATS.find(function(c){return c.key===entry.catKey;})&&CATS.find(function(c){return c.key===entry.catKey;}).emoji||"📋"),
+              e("div",{style:{flex:1}},
+                e("div",{style:{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}},
+                  e("span",{style:{fontSize:13,fontWeight:700,color:PD}},entry.storeName),
+                  e("span",{style:{fontSize:11,color:"#C8C6BE"}},"·"),
+                  e("span",{style:{fontSize:12,color:"#888780"}},entry.catLabel)
+                ),
+                e("div",{style:{display:"flex",alignItems:"center",gap:6,marginTop:3}},
+                  e("span",{style:{fontSize:11,fontWeight:500,padding:"1px 8px",borderRadius:99,background:sc_from.bg,color:sc_from.text}},entry.from),
+                  e("span",{style:{fontSize:12,color:"#C8C6BE"}},"→"),
+                  e("span",{style:{fontSize:11,fontWeight:500,padding:"1px 8px",borderRadius:99,background:sc_to.bg,color:sc_to.text}},entry.to)
+                )
+              ),
+              e("div",{style:{fontSize:11,color:"#C8C6BE",whiteSpace:"nowrap",fontFamily:"DM Mono",flexShrink:0}},fts(entry.at))
+            );
+          })
+        )
+    );
+  }
+
+  // ============ FORMS VIEW ============
   if(view==="forms"){
     var activeAll2=cat.active.concat(cat.refurb);
     var groups=["tile","lighting","bar","coffee"];
     function isFormDone(sid2){return FORM_FIELDS.every(function(ff2){var f2=forms[sid2]||{};return f2[ff2.key+"_done"]||f2[ff2.key+"_na"];});}
-    function barFlag(s){
-      var sid2=sk(s),f=forms[sid2]||{};
-      if(f["barSent_done"])return null;
-      var barRow=rows[sid2]&&rows[sid2]["bar"];
-      if(!barRow||!barRow.eta)return null;
-      var d2=du(barRow.eta);
-      if(d2!==null&&d2<=7)return"Bar install in "+d2+"d — checklist not sent!";
-      return null;
-    }
-    function coffeeFlag(s){
-      var sid2=sk(s),f=forms[sid2]||{};
-      if(f["coffeeSent_done"])return null;
-      var br=rows[sid2]&&rows[sid2]["bar"],mr=rows[sid2]&&rows[sid2]["millwork"];
-      if(br&&mr&&DONE_S.indexOf(br.status)>-1&&DONE_S.indexOf(mr.status)>-1)return"Bar & Millwork done — send coffee form!";
-      return null;
-    }
-    content=e("div",{style:{maxWidth:1400,margin:"0 auto",padding:"24px 20px"}},
-      e("div",{style:{fontSize:13,color:"#888780",marginBottom:16}},"Active stores only. Row turns green when all forms are complete."),
+    function barFlag(s){var sid2=sk(s),f=forms[sid2]||{};if(f["barSent_done"])return null;var barRow=rows[sid2]&&rows[sid2]["bar"];if(!barRow||!barRow.eta)return null;var d2=du(barRow.eta);if(d2!==null&&d2<=7)return"Bar install in "+d2+"d — checklist not sent!";return null;}
+    function coffeeFlag(s){var sid2=sk(s),f=forms[sid2]||{};if(f["coffeeSent_done"])return null;var br=rows[sid2]&&rows[sid2]["bar"],mr=rows[sid2]&&rows[sid2]["millwork"];if(br&&mr&&DONE_S.indexOf(br.status)>-1&&DONE_S.indexOf(mr.status)>-1)return"Bar & Millwork done — send coffee form!";return null;}
+    content=e("div",{className:"fade-in",style:{maxWidth:1400,margin:"0 auto",padding:"20px 20px"}},
+      e("div",{style:{fontSize:12,color:"#888780",marginBottom:14}},"Active stores only. Row turns green when all forms are complete."),
       e("div",{style:{overflowX:"auto"}},
-        e("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:12,background:"#fff",borderRadius:20,overflow:"hidden",border:"1px solid "+PM}},
+        e("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:12,background:"#fff",borderRadius:18,overflow:"hidden",border:"1px solid "+PM}},
           e("thead",null,
             e("tr",null,
               e("th",{style:{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:PD,background:PL,borderBottom:"2px solid "+PM,minWidth:160}},"Store"),
               groups.map(function(grp){
                 var fields=FORM_FIELDS.filter(function(f){return f.group===grp;});
                 var gc=GROUP_CFG[grp];
-                return e("th",{key:grp,colSpan:fields.length,style:{padding:"12px 16px",textAlign:"center",fontSize:11,fontWeight:700,color:gc.text,background:gc.bg,borderBottom:"2px solid "+PM,borderLeft:"2px solid "+PM}},gc.label+" ("+fields.length+")");
+                return e("th",{key:grp,colSpan:fields.length,style:{padding:"10px 14px",textAlign:"center",fontSize:11,fontWeight:700,color:gc.text,background:gc.bg,borderBottom:"2px solid "+PM,borderLeft:"2px solid "+PM}},gc.label+" ("+fields.length+")");
               })
             ),
             e("tr",null,
@@ -523,7 +774,7 @@ function App(){
               FORM_FIELDS.map(function(ff2){
                 var gc=GROUP_CFG[ff2.group];
                 var isFirst=ff2.key==="tileSent"||ff2.key==="lightingApproved"||ff2.key==="barSent"||ff2.key==="coffeeSent";
-                return e("th",{key:ff2.key,style:{padding:"8px 10px",textAlign:"center",fontSize:10,fontWeight:600,color:gc.text,background:gc.bg,borderBottom:"2px solid "+PM,borderLeft:isFirst?"2px solid "+PM:"none",whiteSpace:"nowrap",minWidth:110}},ff2.label);
+                return e("th",{key:ff2.key,style:{padding:"8px 8px",textAlign:"center",fontSize:10,fontWeight:600,color:gc.text,background:gc.bg,borderBottom:"2px solid "+PM,borderLeft:isFirst?"2px solid "+PM:"none",whiteSpace:"nowrap",minWidth:100}},ff2.label);
               })
             )
           ),
@@ -532,11 +783,11 @@ function App(){
               var sid2=sk(s),f=forms[sid2]||{};
               var done=isFormDone(sid2),bf=barFlag(s),cf=coffeeFlag(s),hasFlag=bf||cf;
               return e("tr",{key:sid2,style:{background:done?"#F0FBF5":i%2===0?"#fff":"#FDF5F8",opacity:done?0.75:1}},
-                e("td",{style:{padding:"10px 16px",borderBottom:"1px solid "+PM,minWidth:160}},
-                  e("div",{style:{display:"flex",alignItems:"flex-start",gap:8}},
-                    done?e("span",{style:{fontSize:14}},"✅"):hasFlag?e("span",{style:{fontSize:14}},"⚠️"):null,
+                e("td",{style:{padding:"10px 14px",borderBottom:"1px solid "+PM,minWidth:160}},
+                  e("div",{style:{display:"flex",alignItems:"flex-start",gap:6}},
+                    done?e("span",{style:{fontSize:13}},"✅"):hasFlag?e("span",{style:{fontSize:13}},"⚠️"):null,
                     e("div",null,
-                      e("div",{style:{fontSize:13,fontWeight:700,color:done?"#0F6E56":PD}},s.name),
+                      e("div",{style:{fontSize:12,fontWeight:700,color:done?"#0F6E56":PD}},s.name),
                       s.type==="refurb"?e("span",{style:{fontSize:10,padding:"1px 6px",borderRadius:99,background:"#EBF3FC",color:"#185FA5"}},"Refurb"):null,
                       hasFlag&&!done?e("div",{style:{fontSize:10,color:"#A32D2D",marginTop:2,fontWeight:600}},bf||cf):null
                     )
@@ -547,11 +798,11 @@ function App(){
                   var isDone=f[dk]||false,date=f[dt]||"";
                   var gc=GROUP_CFG[ff2.group];
                   var isFirst=ff2.key==="tileSent"||ff2.key==="lightingApproved"||ff2.key==="barSent"||ff2.key==="coffeeSent";
-                  return e("td",{key:ff2.key,style:{padding:"8px 10px",borderBottom:"1px solid "+PM,borderLeft:isFirst?"2px solid "+PM:"none",textAlign:"center",background:isDone?(done?"#F0FBF5":gc.bg+"55"):"transparent",verticalAlign:"top"}},
-                    e("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",gap:4}},
-                      e("input",{type:"checkbox",checked:isDone,onChange:function(ev){updForm(sid2,dk,ev.target.checked);},style:{width:16,height:16,cursor:"pointer",accentColor:PINK}}),
-                      isDone?e("input",{type:"date",value:date,onChange:function(ev){updForm(sid2,dt,ev.target.value);},style:{fontSize:10,padding:"2px 4px",borderRadius:6,border:"1px solid "+PM,background:"#fff",outline:"none",width:100}}):null,
-                      !isDone?e("button",{onClick:function(){updForm(sid2,ff2.key+"_na",!(f[ff2.key+"_na"]));},style:{fontSize:9,padding:"2px 6px",borderRadius:99,border:"1px solid "+(f[ff2.key+"_na"]?"#C8C6BE":PM),background:f[ff2.key+"_na"]?"#F5F4F1":"transparent",color:f[ff2.key+"_na"]?"#888780":PD,cursor:"pointer"}},f[ff2.key+"_na"]?"↩":"N/A"):null
+                  return e("td",{key:ff2.key,style:{padding:"7px 8px",borderBottom:"1px solid "+PM,borderLeft:isFirst?"2px solid "+PM:"none",textAlign:"center",background:isDone?(done?"#F0FBF5":gc.bg+"55"):"transparent",verticalAlign:"top"}},
+                    e("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",gap:3}},
+                      e("input",{type:"checkbox",checked:isDone,onChange:function(ev){updForm(sid2,dk,ev.target.checked);},style:{width:15,height:15,cursor:"pointer",accentColor:PINK}}),
+                      isDone?e("input",{type:"date",value:date,onChange:function(ev){updForm(sid2,dt,ev.target.value);},style:{fontSize:10,padding:"2px 4px",borderRadius:5,border:"1px solid "+PM,background:"#fff",outline:"none",width:95}}):null,
+                      !isDone?e("button",{onClick:function(){updForm(sid2,ff2.key+"_na",!(f[ff2.key+"_na"]));},style:{fontSize:9,padding:"2px 5px",borderRadius:99,border:"1px solid "+(f[ff2.key+"_na"]?"#C8C6BE":PM),background:f[ff2.key+"_na"]?"#F5F4F1":"transparent",color:f[ff2.key+"_na"]?"#888780":PD,cursor:"pointer"}},f[ff2.key+"_na"]?"↩":"N/A"):null
                     )
                   );
                 })
@@ -563,80 +814,107 @@ function App(){
     );
   }
 
+  // ============ DASHBOARD ============
   if(view==="dashboard"){
-    content=e("div",{style:{maxWidth:1100,margin:"0 auto",padding:"24px 20px"}},
-      e("div",{style:{display:"flex",gap:8,marginBottom:24,flexWrap:"wrap",alignItems:"center"}},
+    content=e("div",{className:"fade-in",style:{maxWidth:1100,margin:"0 auto",padding:"20px 20px"}},
+      e("div",{style:{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap",alignItems:"center"}},
         e("span",{style:{fontSize:12,color:"#C8C6BE",fontWeight:500}},"Filter"),
         e("select",{value:dashRegion,onChange:function(ev){setDashRegion(ev.target.value);},style:{fontSize:12,padding:"5px 12px",borderRadius:99,border:"1px solid "+PM,background:"#fff",color:PD,outline:"none"}},["All","East","West"].map(function(o){return e("option",{key:o},o);})),
         e("select",{value:dashCM,onChange:function(ev){setDashCM(ev.target.value);},style:{fontSize:12,padding:"5px 12px",borderRadius:99,border:"1px solid "+PM,background:"#fff",color:PD,outline:"none"}},["All"].concat(allCMs).map(function(o){return e("option",{key:o},o);})),
         e("button",{onClick:function(){window.print();},style:{marginLeft:"auto",fontSize:12,padding:"5px 16px",borderRadius:99,border:"1.5px solid "+PM,background:"#fff",color:PD,cursor:"pointer"}},"🖨 Print / Export PDF")
       ),
-      e("div",{style:{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap"}},
-        [["Total Pipeline",dashM.total,"stores tracked",null],["Opening This Month",dashM.otm,"store openings",dashM.otm>0?"#854F0B":PD],["Items At Risk",dashM.ar,"delayed or overdue",dashM.ar>0?"#A32D2D":"#0F6E56"],["On-Time Rate",dashM.otr!==null?dashM.otr+"%":"—",dashM.otr!==null?"based on "+dashM.we+" ETAs set":"no ETAs set yet",dashM.otr===null?"#C8C6BE":dashM.otr>=80?"#0F6E56":dashM.otr>=60?"#854F0B":"#A32D2D"]].map(function(sc){
-          return e("div",{key:sc[0],style:{background:"#fff",borderRadius:18,border:"1px solid "+PM,padding:"20px 24px",flex:1,minWidth:160}},e("div",{style:{fontSize:11,color:"#C8C6BE",fontWeight:500,marginBottom:8}},sc[0]),e("div",{style:{fontSize:32,fontWeight:700,color:sc[3]||PINK,marginBottom:4}},sc[1]),e("div",{style:{fontSize:12,color:"#888780"}},sc[2]));
-        })
-      ),
-      e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,padding:"20px 24px",marginBottom:16}},
-        e("div",{style:{fontSize:14,fontWeight:700,color:PD,marginBottom:16}},"Store Opening Confidence"),
-        e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:10}},
-          dashStores.map(function(s){
-            var conf=sco(s,rows),cfg=CCFG[conf],sid2=sk(s),ac2=gac(rows,sid2),dc2=gdc(rows,sid2),pct=ac2.length?Math.round((dc2.length/ac2.length)*100):0,d=du(s.ho);
-            return e("div",{key:sid2,onClick:function(){setActiveStore(sid2);setView("site");setFilter(s.type==="refurb"?"refurb":"active");},style:{background:cfg.bg,borderRadius:14,padding:"14px 16px",cursor:"pointer"}},
-              e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}},e("div",{style:{fontSize:13,fontWeight:700,color:PD,lineHeight:1.3,flex:1,marginRight:8}},s.name),e("span",{style:{fontSize:11,fontWeight:700,color:cfg.text,background:"#fff",padding:"2px 8px",borderRadius:99,whiteSpace:"nowrap"}},cfg.label)),
-              s.type==="refurb"?e("div",{style:{marginBottom:4}},refurbBadge()):null,
-              e("div",{style:{fontSize:11,color:"#888780",marginBottom:8}},fd(s.op||s.ho)+" · "+(d!==null?d+"d out":"TBD")),
-              e("div",{style:{background:"rgba(255,255,255,0.6)",borderRadius:99,height:5,marginBottom:4}},e("div",{style:{background:cfg.dot,borderRadius:99,height:5,width:pct+"%"}})),
-              e("div",{style:{fontSize:11,color:"#888780"}},dc2.length+"/"+ac2.length+" complete")
+      // Today view banner
+      todayItems.length>0?e("div",{style:{background:"#fff",borderRadius:18,border:"1.5px solid #EF9F27",padding:"16px 20px",marginBottom:16}},
+        e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}},
+          e("div",{style:{fontSize:14,fontWeight:700,color:"#854F0B"}},"⚠️ Needs Attention This Week ("+todayItems.length+" items)"),
+          e("button",{onClick:function(){setView("site");},style:{fontSize:11,padding:"4px 12px",borderRadius:99,border:"1px solid #EF9F27",background:"#FEF4E6",color:"#854F0B",cursor:"pointer"}},"View in By Store")
+        ),
+        e("div",{style:{display:"flex",flexDirection:"column",gap:5,maxHeight:200,overflowY:"auto"}},
+          todayItems.slice(0,10).map(function(ti){
+            var sc=SCFG[ti.row.status]||SCFG["Not Started"];
+            return e("div",{key:ti.sid2+":"+ti.cat.key,style:{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:"1px solid #FDF5F8"},
+              onClick:function(){setActiveStore(ti.sid2);setView("site");setFilter(gss(ti.store,rows)==="refurb"?"refurb":"active");}},
+              e("span",{style:{fontSize:13,flexShrink:0}},ti.cat.emoji),
+              e("span",{style:{fontSize:12,fontWeight:700,color:PD,flex:1,cursor:"pointer"}},ti.store.name),
+              e("span",{style:{fontSize:11,color:"#888780"}},ti.cat.label),
+              ti.isStuck?e("span",{style:{fontSize:11,fontWeight:600,color:"#854F0B"}},"🚩 Stuck"):null,
+              ti.etaD?e("span",{style:{fontSize:11,fontWeight:600,color:ti.isOverdue?"#A32D2D":"#888780"}},ti.isOverdue?"Overdue: "+fd(ti.row.eta):"Due: "+fd(ti.row.eta)):null,
+              e("span",{style:{fontSize:11,fontWeight:600,padding:"1px 8px",borderRadius:99,background:sc.bg,color:sc.text}},ti.row.status)
             );
           })
-        )
-      ),
-      e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,padding:"20px 24px",marginBottom:16}},
-        e("div",{style:{fontSize:14,fontWeight:700,color:PD,marginBottom:16}},"Vendor Health — Active Stores"),
-        e("div",{style:{display:"flex",flexDirection:"column",gap:8}},
-          Object.entries(dashM.vl).sort(function(a,b){return b[1].total-a[1].total;}).map(function(entry){
-            var vendor=entry[0],data=entry[1],otp=data.withEta>0?Math.round((data.onTime/data.withEta)*100):null;
-            return e("div",{key:vendor,style:{display:"grid",gridTemplateColumns:"200px 1fr 80px 120px",gap:12,alignItems:"center",padding:"10px 14px",background:"#FDF5F8",borderRadius:12}},
-              e("div",{style:{fontSize:13,fontWeight:600,color:PD}},vendor),
-              e("div",{style:{display:"flex",alignItems:"center",gap:8}},e("div",{style:{background:PM,borderRadius:99,height:6,flex:1}},e("div",{style:{background:data.done===data.total?"#1D9E75":PINK,borderRadius:99,height:6,width:Math.round((data.done/data.total)*100)+"%"}})),e("span",{style:{fontSize:11,color:"#888780",whiteSpace:"nowrap"}},data.done+"/"+data.total)),
-              data.atRisk>0?e("span",{style:{fontSize:11,fontWeight:600,padding:"3px 8px",borderRadius:99,background:"#FCEDED",color:"#A32D2D",textAlign:"center"}},data.atRisk+" at risk"):e("span",{style:{fontSize:11,color:"#C8C6BE",textAlign:"center"}},"—"),
-              e("span",{style:{fontSize:12,fontWeight:600,color:otp===null?"#C8C6BE":otp>=80?"#0F6E56":otp>=60?"#854F0B":"#A32D2D",textAlign:"right"}},otp!==null?otp+"% on time":"No ETAs yet")
-            );
-          })
-        )
-      ),
-      cat.complete.length>0?e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid #1D9E75",padding:"20px 24px",marginBottom:16}},
-        e("div",{style:{fontSize:14,fontWeight:700,color:PD,marginBottom:16}},"Completed Stores 🎉"),
-        e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12}},
-          cat.complete.map(function(s){var score=ss2(s,rows);return e("div",{key:sk(s),onClick:function(){setActiveStore(sk(s));setFilter("complete");setView("site");},style:{background:"#F5FBF8",borderRadius:14,padding:"16px",border:"1px solid #B8E8D4",cursor:"pointer"}},e("div",{style:{fontSize:13,fontWeight:700,color:PD,marginBottom:4}},s.name),e("div",{style:{fontSize:11,color:"#888780",marginBottom:4}},s.cm+" · Opened "+fd(s.op||s.ho)),score?e("div",{style:{fontSize:11,color:"#0F6E56",fontWeight:500}},score.done+"/"+score.total+" items · "+(score.otp!=null?score.otp+"% on time":"No ETA data")):null);})
         )
       ):null,
-      e("div",{style:{background:"#fff",borderRadius:20,border:"1px solid "+PM,padding:"20px 24px"}},
-        e("div",{style:{fontSize:14,fontWeight:700,color:PD,marginBottom:16}},"Pipeline — Stores Opening by Month"),
-        e("div",{style:{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}},
+      e("div",{style:{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}},
+        [["Total Pipeline",dashM.total,"stores tracked",null],["Opening This Month",dashM.otm,"store openings",dashM.otm>0?"#854F0B":PD],["Items At Risk",dashM.ar,"delayed or overdue",dashM.ar>0?"#A32D2D":"#0F6E56"],["On-Time Rate",dashM.otr!==null?dashM.otr+"%":"—",dashM.otr!==null?"based on "+dashM.we+" ETAs set":"no ETAs set yet",dashM.otr===null?"#C8C6BE":dashM.otr>=80?"#0F6E56":dashM.otr>=60?"#854F0B":"#A32D2D"]].map(function(sc){
+          return e("div",{key:sc[0],style:{background:"#fff",borderRadius:16,border:"1px solid "+PM,padding:"18px 22px",flex:1,minWidth:150}},e("div",{style:{fontSize:10,color:"#C8C6BE",fontWeight:600,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.4px"}},sc[0]),e("div",{style:{fontSize:30,fontWeight:700,color:sc[3]||PINK,marginBottom:3}},sc[1]),e("div",{style:{fontSize:11,color:"#888780"}},sc[2]));
+        })
+      ),
+      e("div",{style:{background:"#fff",borderRadius:18,border:"1px solid "+PM,padding:"18px 22px",marginBottom:14}},
+        e("div",{style:{fontSize:14,fontWeight:700,color:PD,marginBottom:14}},"Store Opening Confidence"),
+        e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:8}},
+          dashStores.map(function(s){
+            var conf=sco(s,rows),cfg=CCFG[conf],sid2=sk(s),ac2=gac(rows,sid2),dc2=gdc(rows,sid2),pct=ac2.length?Math.round((dc2.length/ac2.length)*100):0,d=du(s.ho);
+            var stuckCt=CATS.filter(function(c){return stuck[sid2+":"+c.key];}).length;
+            return e("div",{key:sid2,onClick:function(){setActiveStore(sid2);setView("site");setFilter(s.type==="refurb"?"refurb":"active");},style:{background:cfg.bg,borderRadius:12,padding:"12px 14px",cursor:"pointer"}},
+              e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}},e("div",{style:{fontSize:12,fontWeight:700,color:PD,lineHeight:1.3,flex:1,marginRight:6}},s.name),e("span",{style:{fontSize:10,fontWeight:700,color:cfg.text,background:"#fff",padding:"2px 7px",borderRadius:99,whiteSpace:"nowrap"}},cfg.label)),
+              s.type==="refurb"?e("div",{style:{marginBottom:3}},refurbBadge()):null,
+              e("div",{style:{fontSize:10,color:"#888780",marginBottom:6}},fd(s.op||s.ho)+" · "+(d!==null?d+"d out":"TBD")),
+              e("div",{style:{background:"rgba(255,255,255,0.6)",borderRadius:99,height:4,marginBottom:3}},e("div",{style:{background:cfg.dot,borderRadius:99,height:4,width:pct+"%"}})),
+              e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+                e("div",{style:{fontSize:10,color:"#888780"}},dc2.length+"/"+ac2.length+" complete"),
+                stuckCt>0?e("span",{style:{fontSize:10,color:"#854F0B",fontWeight:600}},"🚩 "+stuckCt):null
+              )
+            );
+          })
+        )
+      ),
+      e("div",{style:{background:"#fff",borderRadius:18,border:"1px solid "+PM,padding:"18px 22px",marginBottom:14}},
+        e("div",{style:{fontSize:14,fontWeight:700,color:PD,marginBottom:14}},"Vendor Health — Active Stores"),
+        e("div",{style:{display:"flex",flexDirection:"column",gap:6}},
+          Object.entries(dashM.vl).sort(function(a,b){return b[1].total-a[1].total;}).map(function(entry){
+            var vendor=entry[0],data=entry[1],otp=data.withEta>0?Math.round((data.onTime/data.withEta)*100):null;
+            return e("div",{key:vendor,style:{display:"grid",gridTemplateColumns:"190px 1fr 80px 110px",gap:10,alignItems:"center",padding:"8px 12px",background:"#FDF5F8",borderRadius:10}},
+              e("div",{style:{fontSize:12,fontWeight:600,color:PD}},vendor),
+              e("div",{style:{display:"flex",alignItems:"center",gap:6}},e("div",{style:{background:PM,borderRadius:99,height:5,flex:1}},e("div",{style:{background:data.done===data.total?"#1D9E75":PINK,borderRadius:99,height:5,width:Math.round((data.done/data.total)*100)+"%"}})),e("span",{style:{fontSize:10,color:"#888780",whiteSpace:"nowrap"}},data.done+"/"+data.total)),
+              data.atRisk>0?e("span",{style:{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:99,background:"#FCEDED",color:"#A32D2D",textAlign:"center"}},data.atRisk+" at risk"):e("span",{style:{fontSize:11,color:"#C8C6BE",textAlign:"center"}},"—"),
+              e("span",{style:{fontSize:11,fontWeight:600,color:otp===null?"#C8C6BE":otp>=80?"#0F6E56":otp>=60?"#854F0B":"#A32D2D",textAlign:"right"}},otp!==null?otp+"% on time":"No ETAs yet")
+            );
+          })
+        )
+      ),
+      cat.complete.length>0?e("div",{style:{background:"#fff",borderRadius:18,border:"1px solid #1D9E75",padding:"18px 22px",marginBottom:14}},
+        e("div",{style:{fontSize:14,fontWeight:700,color:PD,marginBottom:14}},"Completed Stores 🎉"),
+        e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))",gap:10}},
+          cat.complete.map(function(s){var score=ss2(s,rows);return e("div",{key:sk(s),onClick:function(){setActiveStore(sk(s));setFilter("complete");setView("site");},style:{background:"#F5FBF8",borderRadius:12,padding:"14px",border:"1px solid #B8E8D4",cursor:"pointer"}},e("div",{style:{fontSize:12,fontWeight:700,color:PD,marginBottom:3}},s.name),e("div",{style:{fontSize:11,color:"#888780",marginBottom:3}},s.cm+" · Opened "+fd(s.op||s.ho)),score?e("div",{style:{fontSize:11,color:"#0F6E56",fontWeight:500}},score.done+"/"+score.total+" items · "+(score.otp!=null?score.otp+"% on time":"No ETA data")):null);})
+        )
+      ):null,
+      e("div",{style:{background:"#fff",borderRadius:18,border:"1px solid "+PM,padding:"18px 22px"}},
+        e("div",{style:{fontSize:14,fontWeight:700,color:PD,marginBottom:14}},"Pipeline — Stores Opening by Month"),
+        e("div",{style:{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}},
           Object.entries(dashM.bm).sort(function(a,b){return new Date("1 "+a[0])-new Date("1 "+b[0]);}).map(function(entry){
-            var month=entry[0],count=entry[1],today=new Date(),isNow=month===fm(today.toISOString().split("T")[0]);
-            return e("div",{key:month,style:{display:"flex",flexDirection:"column",alignItems:"center",gap:6}},e("div",{style:{width:36,background:isNow?PINK:PM,borderRadius:"6px 6px 0 0",height:Math.max(20,count*18),display:"flex",alignItems:"center",justifyContent:"center"}},e("span",{style:{fontSize:11,fontWeight:700,color:"#fff"}},count)),e("span",{style:{fontSize:10,color:isNow?PINK:"#888780",fontWeight:isNow?700:400,whiteSpace:"nowrap"}},month));
+            var month=entry[0],count=entry[1],tod=new Date(),isNow=month===fm(tod.toISOString().split("T")[0]);
+            return e("div",{key:month,style:{display:"flex",flexDirection:"column",alignItems:"center",gap:4}},e("div",{style:{width:34,background:isNow?PINK:PM,borderRadius:"5px 5px 0 0",height:Math.max(18,count*16),display:"flex",alignItems:"center",justifyContent:"center"}},e("span",{style:{fontSize:10,fontWeight:700,color:"#fff"}},count)),e("span",{style:{fontSize:9,color:isNow?PINK:"#888780",fontWeight:isNow?700:400,whiteSpace:"nowrap"}},month));
           })
         )
       )
     );
   }
 
-  var modal=showAdd?e("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200},onClick:function(){setShowAdd(false);}},
-    e("div",{style:{background:"#fff",borderRadius:24,padding:"28px 32px",width:480,boxShadow:"0 20px 60px rgba(0,0,0,0.15)"},onClick:function(ev){ev.stopPropagation();}},
-      e("div",{style:{fontSize:18,fontWeight:700,color:PD,marginBottom:4}},"Add New Store"),
-      e("div",{style:{fontSize:13,color:"#888780",marginBottom:20}},"Fill in what you know — everything can be updated later."),
-      e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}},
+  // Add Store Modal
+  var modal=showAdd?e("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,0.25)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200},onClick:function(){setShowAdd(false);}},
+    e("div",{style:{background:"#fff",borderRadius:22,padding:"26px 30px",width:460,boxShadow:"0 20px 60px rgba(0,0,0,0.12)"},onClick:function(ev){ev.stopPropagation();}},
+      e("div",{style:{fontSize:17,fontWeight:700,color:PD,marginBottom:3}},"Add New Store"),
+      e("div",{style:{fontSize:12,color:"#888780",marginBottom:18}},"Fill in what you know — everything can be updated later."),
+      e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}},
         [["Store Name","name","text",true],["Store ID","id","text",false],["CM","cm","text",false],["Construction Start","cs","date",false],["Handover","ho","date",false],["Store Open","op","date",false]].map(function(t){
-          return e("div",{key:t[1],style:t[1]==="name"?{gridColumn:"1/-1"}:{}},e("div",{style:{fontSize:11,color:"#C8C6BE",marginBottom:4}},t[0],t[3]?e("span",{style:{color:PINK}}," *"):null),e("input",{type:t[2],value:newStore[t[1]]||"",onChange:function(ev){setNewStore(function(p){return Object.assign({},p,{[t[1]]:ev.target.value});});},style:{width:"100%",fontSize:13,padding:"8px 12px",borderRadius:10,border:"1px solid "+PM,outline:"none",background:"#FDF5F8"}}));
+          return e("div",{key:t[1],style:t[1]==="name"?{gridColumn:"1/-1"}:{}},e("div",{style:{fontSize:10,color:"#C8C6BE",marginBottom:3,textTransform:"uppercase",letterSpacing:"0.4px"}},t[0],t[3]?e("span",{style:{color:PINK}}," *"):null),e("input",{type:t[2],value:newStore[t[1]]||"",onChange:function(ev){setNewStore(function(p){return Object.assign({},p,{[t[1]]:ev.target.value});});},style:{width:"100%",fontSize:13,padding:"7px 11px",borderRadius:9,border:"1px solid "+PM,outline:"none",background:"#FDF5F8"}}));
         }),
-        e("div",null,e("div",{style:{fontSize:11,color:"#C8C6BE",marginBottom:4}},"Region"),e("select",{value:newStore.region,onChange:function(ev){setNewStore(function(p){return Object.assign({},p,{region:ev.target.value});});},style:{width:"100%",fontSize:13,padding:"8px 12px",borderRadius:10,border:"1px solid "+PM,outline:"none",background:"#FDF5F8"}},e("option",null,"East"),e("option",null,"West"))),
-        e("div",null,e("div",{style:{fontSize:11,color:"#C8C6BE",marginBottom:4}},"Type ",e("span",{style:{color:PINK}},"*")),e("select",{value:newStore.type,onChange:function(ev){setNewStore(function(p){return Object.assign({},p,{type:ev.target.value});});},style:{width:"100%",fontSize:13,padding:"8px 12px",borderRadius:10,border:"1px solid "+PM,outline:"none",background:"#FDF5F8"}},e("option",{value:"new"},"New Build"),e("option",{value:"refurb"},"Refurb")))
+        e("div",null,e("div",{style:{fontSize:10,color:"#C8C6BE",marginBottom:3,textTransform:"uppercase",letterSpacing:"0.4px"}},"Region"),e("select",{value:newStore.region,onChange:function(ev){setNewStore(function(p){return Object.assign({},p,{region:ev.target.value});});},style:{width:"100%",fontSize:13,padding:"7px 11px",borderRadius:9,border:"1px solid "+PM,outline:"none",background:"#FDF5F8"}},e("option",null,"East"),e("option",null,"West"))),
+        e("div",null,e("div",{style:{fontSize:10,color:"#C8C6BE",marginBottom:3,textTransform:"uppercase",letterSpacing:"0.4px"}},"Type ",e("span",{style:{color:PINK}},"*")),e("select",{value:newStore.type,onChange:function(ev){setNewStore(function(p){return Object.assign({},p,{type:ev.target.value});});},style:{width:"100%",fontSize:13,padding:"7px 11px",borderRadius:9,border:"1px solid "+PM,outline:"none",background:"#FDF5F8"}},e("option",{value:"new"},"New Build"),e("option",{value:"refurb"},"Refurb")))
       ),
-      e("div",{style:{display:"flex",gap:10,justifyContent:"flex-end"}},
-        e("button",{onClick:function(){setShowAdd(false);},style:{fontSize:13,padding:"8px 18px",borderRadius:99,border:"1px solid "+PM,background:"#fff",color:PD,cursor:"pointer"}},"Cancel"),
-        e("button",{onClick:addStoreHandler,disabled:!newStore.name.trim(),style:{fontSize:13,padding:"8px 20px",borderRadius:99,border:"none",background:newStore.name.trim()?PINK:"#F4C0D1",color:"#fff",cursor:newStore.name.trim()?"pointer":"default",fontWeight:600}},"Add Store")
+      e("div",{style:{display:"flex",gap:8,justifyContent:"flex-end"}},
+        e("button",{onClick:function(){setShowAdd(false);},style:{fontSize:13,padding:"7px 16px",borderRadius:99,border:"1px solid "+PM,background:"#fff",color:PD,cursor:"pointer"}},"Cancel"),
+        e("button",{onClick:addStoreHandler,disabled:!newStore.name.trim(),style:{fontSize:13,padding:"7px 18px",borderRadius:99,border:"none",background:newStore.name.trim()?PINK:"#F4C0D1",color:"#fff",cursor:newStore.name.trim()?"pointer":"default",fontWeight:600}},"Add Store")
       )
     )
   ):null;
