@@ -6,6 +6,7 @@
 <title>JJ Procurement Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -27,6 +28,23 @@ var e=React.createElement,useState=React.useState,useMemo=React.useMemo,useEffec
 var PINK="#E8165B",PL="#FBEAF0",PM="#F4C0D1",PD="#72243E";
 // CRITICAL: storage keys preserved exactly
 var SK="jj_s9",RK="jj_r9",NK="jj_n9",FK="jj_f9";
+
+// Supabase config
+var SUPA_URL='https://rohegqqsypwbhgfuobhkq.supabase.co';
+var SUPA_KEY='sb_publishable_yatEtt-eKbulrehWIMyAEA_MhQSf_NX';
+var supabase=window.supabase.createClient(SUPA_URL,SUPA_KEY);
+
+async function dbGet(key){
+  try{
+    var r=await supabase.from('procurement_data').select('value').eq('key',key).single();
+    return r.data?r.data.value:null;
+  }catch(e){return null;}
+}
+async function dbSet(key,value){
+  try{
+    await supabase.from('procurement_data').upsert({key:key,value:value},{onConflict:'key'});
+  }catch(e){}
+}
 
 var STORES=[
   {name:"114 Tenth Ave",id:"10638",region:"East",cm:"Devin Corcoran",cs:"2026-01-27",ho:"2026-05-11",op:"2026-05-18",type:"new"},
@@ -192,24 +210,44 @@ function App(){
   var stuck=stk[0],setStuck=stk[1];
   var activity=actLog[0],setActivity=actLog[1];
 
-  // Load from localStorage
+  // Load from Supabase (shared) with localStorage fallback
   useEffect(function(){
-    try{
-      var sr=localStorage.getItem(SK),rr=localStorage.getItem(RK),nn=localStorage.getItem(NK),ff=localStorage.getItem(FK);
-      var ts=localStorage.getItem("jj_ts9"),sk2=localStorage.getItem("jj_stk9"),al=localStorage.getItem("jj_act9");
-      if(sr){var ps=JSON.parse(sr);setStores(ps);if(rr){var b=initRows(ps);setRows(Object.assign(b,JSON.parse(rr)));}}
-      else if(rr){var b2=initRows(STORES);setRows(Object.assign(b2,JSON.parse(rr)));}
-      if(nn)setNotes(JSON.parse(nn));
-      if(ff)setForms(JSON.parse(ff));
-      if(ts)setTimestamps(JSON.parse(ts));
-      if(sk2)setStuck(JSON.parse(sk2));
-      if(al)setActivity(JSON.parse(al));
-    }catch(ex){}
-    setReady(true);
+    async function loadData(){
+      try{
+        // Try Supabase first
+        var sr=await dbGet(SK);
+        var rr=await dbGet(RK);
+        var nn=await dbGet(NK);
+        var ff=await dbGet(FK);
+        var ts=await dbGet("jj_ts9");
+        var sk2=await dbGet("jj_stk9");
+        var al=await dbGet("jj_act9");
+
+        // Fall back to localStorage if Supabase empty
+        if(!sr)sr=localStorage.getItem(SK);
+        if(!rr)rr=localStorage.getItem(RK);
+        if(!nn)nn=localStorage.getItem(NK);
+        if(!ff)ff=localStorage.getItem(FK);
+        if(!ts)ts=localStorage.getItem("jj_ts9");
+        if(!sk2)sk2=localStorage.getItem("jj_stk9");
+        if(!al)al=localStorage.getItem("jj_act9");
+
+        if(sr){var ps=JSON.parse(sr);setStores(ps);if(rr){var b=initRows(ps);setRows(Object.assign(b,JSON.parse(rr)));}}
+        else if(rr){var b2=initRows(STORES);setRows(Object.assign(b2,JSON.parse(rr)));}
+        if(nn)setNotes(JSON.parse(nn));
+        if(ff)setForms(JSON.parse(ff));
+        if(ts)setTimestamps(JSON.parse(ts));
+        if(sk2)setStuck(JSON.parse(sk2));
+        if(al)setActivity(JSON.parse(al));
+      }catch(ex){console.error(ex);}
+      setReady(true);
+    }
+    loadData();
   },[]);
 
   var save=useCallback(function(ns2,nr,nn,nf,nts,nstk,nal){
     try{
+      // Save to localStorage for speed
       localStorage.setItem(SK,JSON.stringify(ns2));
       localStorage.setItem(RK,JSON.stringify(nr));
       localStorage.setItem(NK,JSON.stringify(nn));
@@ -217,6 +255,14 @@ function App(){
       if(nts!==undefined)localStorage.setItem("jj_ts9",JSON.stringify(nts));
       if(nstk!==undefined)localStorage.setItem("jj_stk9",JSON.stringify(nstk));
       if(nal!==undefined)localStorage.setItem("jj_act9",JSON.stringify(nal));
+      // Also save to Supabase so all users see updates
+      dbSet(SK,JSON.stringify(ns2));
+      dbSet(RK,JSON.stringify(nr));
+      dbSet(NK,JSON.stringify(nn));
+      if(nf!==undefined)dbSet(FK,JSON.stringify(nf));
+      if(nts!==undefined)dbSet("jj_ts9",JSON.stringify(nts));
+      if(nstk!==undefined)dbSet("jj_stk9",JSON.stringify(nstk));
+      if(nal!==undefined)dbSet("jj_act9",JSON.stringify(nal));
       setSaveMsg("Saved ✓");setTimeout(function(){setSaveMsg("");},1600);
     }catch(ex){}
   },[]);
