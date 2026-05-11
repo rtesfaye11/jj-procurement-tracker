@@ -558,7 +558,14 @@ function App(){
 
   var nav=e("div",{style:{background:"#fff",borderBottom:"1px solid "+PM,padding:"0 16px",display:"flex",alignItems:"center",justifyContent:"space-between",height:52,position:"sticky",top:0,zIndex:50,gap:8}},
     e("div",{style:{display:"flex",alignItems:"center",gap:8,flexShrink:0}},
-      e("div",{style:{width:26,height:26,borderRadius:7,background:PINK,display:"flex",alignItems:"center",justifyContent:"center"}},e("span",{style:{color:"#fff",fontSize:13,fontWeight:700}},"J")),
+      e("div",{style:{width:26,height:26,borderRadius:7,background:PINK,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"},onClick:function(){
+      window._jClicks=(window._jClicks||0)+1;
+      if(window._jClicks>=5){
+        window._jClicks=0;
+        var t=prompt('Enter GitHub token:');
+        if(t){localStorage.setItem('jj_gh_token',t.trim());window.location.reload();}
+      }
+    }},e("span",{style:{color:"#fff",fontSize:13,fontWeight:700}},"J")),
       e("span",{style:{fontSize:13,fontWeight:700,color:PD,letterSpacing:"-0.3px"}},"FF&E Tracker")
     ),
     e("div",{style:{display:"flex",alignItems:"center",gap:4,overflowX:"auto",flexShrink:1}},
@@ -1073,18 +1080,7 @@ null
     )
   ):null;
 
-  // Token banner: only show if no token AND saving is needed (editor only)
-  // Never show to viewers - they just read data from GitHub
-  var isEditor=!!localStorage.getItem('jj_gh_token')||!!localStorage.getItem('jj_r9');
-  var needsToken=isEditor&&!localStorage.getItem('jj_gh_token');
-  var tokenBanner=needsToken?e("div",{style:{background:"#FEF4E6",borderBottom:"1px solid #EF9F27",padding:"8px 20px",display:"flex",alignItems:"center",gap:10,fontSize:12}},
-    e("span",{style:{color:"#854F0B",fontWeight:600}},"⚙️ Enter your GitHub token to enable live sync for your team"),
-    e("input",{id:"gh_token_input",type:"password",placeholder:"paste token here",style:{fontSize:12,padding:"4px 10px",borderRadius:8,border:"1px solid #EF9F27",outline:"none",width:280}}),
-    e("button",{onClick:function(){
-      var t=document.getElementById('gh_token_input').value.trim();
-      if(t){localStorage.setItem('jj_gh_token',t);window.location.reload();}
-    },style:{fontSize:12,padding:"4px 14px",borderRadius:99,border:"none",background:"#EF9F27",color:"#fff",cursor:"pointer",fontWeight:600}},"Save Token")
-  ):null;
+  var tokenBanner=null; // Hidden - use secret logo click to set token
 
   return e("div",{style:{minHeight:"100vh",background:"#FDF5F8"}},nav,tokenBanner,e("div",{className:"wrap"},content),modal);
 }
