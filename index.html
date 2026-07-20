@@ -202,7 +202,7 @@ function fts(iso){if(!iso)return null;var d=new Date(iso);return d.toLocaleDateS
 function Pill(props){return e("span",{style:{display:"inline-flex",alignItems:"center",gap:5,fontSize:12,fontWeight:500,padding:"3px 10px",borderRadius:99,background:props.cfg.bg,color:props.cfg.text,whiteSpace:"nowrap"}},e("span",{style:{width:6,height:6,borderRadius:"50%",background:props.cfg.text,flexShrink:0}}),props.label);}
 
 function App(){
-  var rs=useState(false);
+  var rs=useState(!!localStorage.getItem('jj_gh_token'));
   var ss=useState(function(){try{var sr=localStorage.getItem('jj_s9');if(sr)return JSON.parse(sr);}catch(ex){}return STORES;});
   var rws=useState(function(){try{var sr=localStorage.getItem('jj_s9');var rr=localStorage.getItem('jj_r9');if(rr){var ps=sr?JSON.parse(sr):STORES;var b=initRows(ps);return Object.assign(b,JSON.parse(rr));}}catch(ex){}return initRows(STORES);});
   var fms=useState(function(){try{var f=localStorage.getItem('jj_f9');if(f)return JSON.parse(f);}catch(ex){}return {};});
@@ -225,8 +225,9 @@ function App(){
   useEffect(function(){
     setReady(true);
     async function syncToGitHub(){try{if(!localStorage.getItem('jj_gh_token'))return;var hasLocal=localStorage.getItem(RK);if(hasLocal){var pushData={};pushData[SK]=localStorage.getItem(SK)||JSON.stringify(STORES);pushData[RK]=localStorage.getItem(RK);pushData[NK]=localStorage.getItem(NK)||'{}';pushData[FK]=localStorage.getItem(FK)||'{}';scheduleSave(pushData);}}catch(ex){}}
-    async function loadForViewer(){try{var ghData=await dbGetAll();if(ghData&&ghData[RK]){var sr2=ghData[SK],rr2=ghData[RK],nn2=ghData[NK],ff2=ghData[FK];if(sr2){var ps2=JSON.parse(sr2);setStores(ps2);localStorage.setItem(SK,sr2);}if(rr2){var base=initRows(sr2?JSON.parse(sr2):STORES);setRows(Object.assign(base,JSON.parse(rr2)));localStorage.setItem(RK,rr2);}if(nn2){setNotes(JSON.parse(nn2));localStorage.setItem(NK,nn2);}if(ff2){setForms(JSON.parse(ff2));localStorage.setItem(FK,ff2);}}else{var sr3=localStorage.getItem(SK),rr3=localStorage.getItem(RK);if(rr3){var ps3=sr3?JSON.parse(sr3):STORES;var base2=initRows(ps3);setRows(Object.assign(base2,JSON.parse(rr3)));if(sr3)setStores(ps3);}else{var b=initRows(STORES);setRows(Object.assign(b,JSON.parse(BASELINE_R)));setNotes(JSON.parse(BASELINE_N));setForms(JSON.parse(BASELINE_F));}}}catch(ex){var sr3=localStorage.getItem(SK),rr3=localStorage.getItem(RK);if(rr3){try{var ps3=sr3?JSON.parse(sr3):STORES;var base2=initRows(ps3);setRows(Object.assign(base2,JSON.parse(rr3)));if(sr3)setStores(ps3);}catch(ex2){}}}}
-    syncToGitHub();loadForViewer();
+    var isEditor=!!localStorage.getItem('jj_gh_token');
+    async function loadForViewer(){try{var ghData=await dbGetAll();if(ghData&&ghData[RK]){var sr2=ghData[SK],rr2=ghData[RK],nn2=ghData[NK],ff2=ghData[FK];if(sr2){var ps2=JSON.parse(sr2);setStores(ps2);localStorage.setItem(SK,sr2);}if(rr2){var base=initRows(sr2?JSON.parse(sr2):STORES);setRows(Object.assign(base,JSON.parse(rr2)));localStorage.setItem(RK,rr2);}if(nn2){setNotes(JSON.parse(nn2));localStorage.setItem(NK,nn2);}if(ff2){setForms(JSON.parse(ff2));localStorage.setItem(FK,ff2);}setReady(true);}else{var sr3=localStorage.getItem(SK),rr3=localStorage.getItem(RK);if(rr3){var ps3=sr3?JSON.parse(sr3):STORES;var base2=initRows(ps3);setRows(Object.assign(base2,JSON.parse(rr3)));if(sr3)setStores(ps3);}else{var b=initRows(STORES);setRows(Object.assign(b,JSON.parse(BASELINE_R)));setNotes(JSON.parse(BASELINE_N));setForms(JSON.parse(BASELINE_F));}setReady(true);}}catch(ex){setReady(true);}}
+    if(isEditor){syncToGitHub();setReady(true);}else{loadForViewer();}
   },[]);
 
   var save=useCallback(function(ns2,nr,nn,nf,nts,nstk,nal){
