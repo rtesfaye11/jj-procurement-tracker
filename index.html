@@ -44,6 +44,24 @@ var _ghSha=null;
 var _saveTimer=null;
 var _pendingSave=null;
 
+function fmtSyncTime(d){
+  return d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+}
+
+function setSyncBadge(ok,label){
+  var el=document.getElementById('syncmsg');
+  if(!el)return;
+  if(ok){
+    el.textContent='Synced '+fmtSyncTime(new Date());
+    el.style.color='#0F6E56';
+    el.style.background='#E2F5EE';
+  }else{
+    el.textContent=label||'Offline - showing local copy';
+    el.style.color='#A32D2D';
+    el.style.background='#FCEDED';
+  }
+}
+
 async function dbGetAll(){
   try{
     var r=await fetch(GH_RAW+'?t='+Date.now());
@@ -78,9 +96,22 @@ function scheduleSave(data){
       if(ok){
         var el=document.getElementById('savemsg');
         if(el){el.textContent='Saved ✓';setTimeout(function(){if(el)el.textContent='';},1600);}
+        setSyncBadge(true);
+      }else{
+        setSyncBadge(false,'Save failed - check connection');
       }
     }
   },1500);
+}
+
+function dedupeStores(list){
+  var seen={};
+  var out=[];
+  list.forEach(function(s){
+    var key=(s.id&&String(s.id).trim())?String(s.id).trim():s.name.trim().toLowerCase();
+    if(!seen[key]){seen[key]=true;out.push(s);}
+  });
+  return out;
 }
 
 var STORES=[
@@ -223,11 +254,45 @@ function App(){
   var timestamps=tss[0],setTimestamps=tss[1],stuck=stk[0],setStuck=stk[1],activity=actLog[0],setActivity=actLog[1];
 
   useEffect(function(){
-    setReady(true);
-    async function syncToGitHub(){try{if(!localStorage.getItem('jj_gh_token'))return;var hasLocal=localStorage.getItem(RK);if(hasLocal){var pushData={};pushData[SK]=localStorage.getItem(SK)||JSON.stringify(STORES);pushData[RK]=localStorage.getItem(RK);pushData[NK]=localStorage.getItem(NK)||'{}';pushData[FK]=localStorage.getItem(FK)||'{}';scheduleSave(pushData);}}catch(ex){}}
-    var isEditor=!!localStorage.getItem('jj_gh_token');
-    async function loadForViewer(){try{var ghData=await dbGetAll();if(ghData&&ghData[RK]){var sr2=ghData[SK],rr2=ghData[RK],nn2=ghData[NK],ff2=ghData[FK];if(sr2){var ps2=JSON.parse(sr2);setStores(ps2);localStorage.setItem(SK,sr2);}if(rr2){var base=initRows(sr2?JSON.parse(sr2):STORES);setRows(Object.assign(base,JSON.parse(rr2)));localStorage.setItem(RK,rr2);}if(nn2){setNotes(JSON.parse(nn2));localStorage.setItem(NK,nn2);}if(ff2){setForms(JSON.parse(ff2));localStorage.setItem(FK,ff2);}setReady(true);}else{var sr3=localStorage.getItem(SK),rr3=localStorage.getItem(RK);if(rr3){var ps3=sr3?JSON.parse(sr3):STORES;var base2=initRows(ps3);setRows(Object.assign(base2,JSON.parse(rr3)));if(sr3)setStores(ps3);}else{var b=initRows(STORES);setRows(Object.assign(b,JSON.parse(BASELINE_R)));setNotes(JSON.parse(BASELINE_N));setForms(JSON.parse(BASELINE_F));}setReady(true);}}catch(ex){setReady(true);}}
-    if(isEditor){syncToGitHub();setReady(true);}else{loadForViewer();}
+    async function loadLatest(){
+      try{
+        var ghData=await dbGetAll();
+        if(ghData&&ghData[RK]){
+          var sr2=ghData[SK],rr2=ghData[RK],nn2=ghData[NK],ff2=ghData[FK];
+          var originalList=sr2?JSON.parse(sr2):STORES;
+          var storeList=dedupeStores(originalList);
+          setStores(storeList);
+          localStorage.setItem(SK,JSON.stringify(storeList));
+          if(rr2){var base=initRows(storeList);setRows(Object.assign(base,JSON.parse(rr2)));localStorage.setItem(RK,rr2);}
+          if(nn2){setNotes(JSON.parse(nn2));localStorage.setItem(NK,nn2);}
+          if(ff2){setForms(JSON.parse(ff2));localStorage.setItem(FK,ff2);}
+          setSyncBadge(true);
+          if(storeList.length!==originalList.length&&localStorage.getItem('jj_gh_token')){
+            var cleanedPush=Object.assign({},ghData);
+            cleanedPush[SK]=JSON.stringify(storeList);
+            scheduleSave(cleanedPush);
+          }
+        }else{
+          var sr3=localStorage.getItem(SK),rr3=localStorage.getItem(RK);
+          var storeList3=sr3?dedupeStores(JSON.parse(sr3)):STORES;
+          if(rr3){
+            var base2=initRows(storeList3);
+            setRows(Object.assign(base2,JSON.parse(rr3)));
+            setStores(storeList3);
+          }else{
+            var b=initRows(STORES);
+            setRows(Object.assign(b,JSON.parse(BASELINE_R)));
+            setNotes(JSON.parse(BASELINE_N));
+            setForms(JSON.parse(BASELINE_F));
+          }
+          if(ghData){setSyncBadge(true);}else{setSyncBadge(false,'Offline - showing local copy');}
+        }
+      }catch(ex){
+        setSyncBadge(false,'Offline - showing local copy');
+      }
+      setReady(true);
+    }
+    loadLatest();
   },[]);
 
   var save=useCallback(function(ns2,nr,nn,nf,nts,nstk,nal){
@@ -239,7 +304,24 @@ function App(){
   function updStore(id,field,val){setStores(function(prev){var next=prev.map(function(s){return sk(s)===id?Object.assign({},s,{[field]:val}):s;});save(next,rows,notes,forms,timestamps,stuck,activity);return next;});}
   function updNotes(sid,val){var next=Object.assign({},notes,{[sid]:val});setNotes(next);save(stores,rows,next,forms,timestamps,stuck,activity);}
   function updForm(sid,field,val){setForms(function(prev){var next=Object.assign({},prev);next[sid]=Object.assign({},prev[sid]||{},{[field]:val});save(stores,rows,notes,next,timestamps,stuck,activity);return next;});}
-  function addStoreHandler(){if(!newStore.name.trim())return;var ns2=stores.concat([Object.assign({},newStore)]);var nr=Object.assign({},rows);nr[sk(newStore)]={};CATS.forEach(function(c){nr[sk(newStore)][c.key]=blankRow();});setStores(ns2);setRows(nr);save(ns2,nr,notes,forms,timestamps,stuck,activity);setShowAdd(false);setNewStore({name:"",id:"",region:"East",cm:"",cs:"",ho:"",op:"",type:"new"});}
+  function addStoreHandler(){
+    if(!newStore.name.trim())return;
+    var key=(newStore.id&&newStore.id.trim())?newStore.id.trim():newStore.name.trim().toLowerCase();
+    var exists=stores.some(function(s){
+      var k=(s.id&&String(s.id).trim())?String(s.id).trim():s.name.trim().toLowerCase();
+      return k===key;
+    });
+    if(exists){alert("A store with that name or ID already exists in the tracker.");return;}
+    var ns2=stores.concat([Object.assign({},newStore)]);
+    var nr=Object.assign({},rows);
+    nr[sk(newStore)]={};
+    CATS.forEach(function(c){nr[sk(newStore)][c.key]=blankRow();});
+    setStores(ns2);
+    setRows(nr);
+    save(ns2,nr,notes,forms,timestamps,stuck,activity);
+    setShowAdd(false);
+    setNewStore({name:"",id:"",region:"East",cm:"",cs:"",ho:"",op:"",type:"new"});
+  }
 
   var cat=useMemo(function(){var active=[],refurb=[],upcoming=[],complete=[];stores.forEach(function(s){var st=gss(s,rows);if(st==="complete")complete.push(s);else if(st==="active")active.push(s);else if(st==="refurb")refurb.push(s);else upcoming.push(s);});return{active:sob(active),refurb:sob(refurb),upcoming:sob(upcoming),complete:sob(complete)};},[stores,rows]);
   var filtStores=useMemo(function(){if(filter==="active")return cat.active;if(filter==="refurb")return cat.refurb;if(filter==="upcoming")return cat.upcoming;if(filter==="complete")return cat.complete;return sob(cat.active.concat(cat.refurb).concat(cat.upcoming).concat(cat.complete));},[filter,cat]);
@@ -270,7 +352,7 @@ function App(){
   function exportCSV(){var lines=["Store,Region,CM,Scope,Vendor,Status,Action Owner,Tracking Info,Handover,Store Open,ETA,Notes"];stores.forEach(function(s){var sid2=sk(s);CATS.forEach(function(c){var row=(rows[sid2]&&rows[sid2][c.key])||blankRow();var v=row.vendorOverride||c.vendor(s.region);lines.push(['"'+s.name+'"',s.region,'"'+s.cm+'"',c.label,v,row.status,row.actionOwner,'"'+(row.trackingInfo||"").replace(/"/g,"'")+'"',s.ho||"TBD",s.op||"TBD",row.eta||"",'"'+(row.notes||"").replace(/"/g,"'")+'"'].join(","));});});var blob=new Blob(["\uFEFF"+lines.join("\n")],{type:"text/csv;charset=utf-8;"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download="JJ_Procurement.csv";document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url);},1000);}
 
   var navTabs=[["site","By Store"],["master","All Stores"],["vendor","By Vendor"],["pipeline","Pipeline"],["timeline","Timeline"],["activity","Activity"],["forms","Forms"],["dashboard","Dashboard"]];
-  var nav=e("div",{style:{background:"#fff",borderBottom:"1px solid "+PM,padding:"0 16px",display:"flex",alignItems:"center",justifyContent:"space-between",height:52,position:"sticky",top:0,zIndex:50,gap:8}},e("div",{style:{display:"flex",alignItems:"center",gap:8,flexShrink:0}},e("div",{style:{width:26,height:26,borderRadius:7,background:PINK,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"},onClick:function(){window._jClicks=(window._jClicks||0)+1;if(window._jClicks>=5){window._jClicks=0;var t=prompt('Enter GitHub token:');if(t){localStorage.setItem('jj_gh_token',t.trim());window.location.reload();}}}},e("span",{style:{color:"#fff",fontSize:13,fontWeight:700}},"J")),e("span",{style:{fontSize:13,fontWeight:700,color:PD,letterSpacing:"-0.3px"}},"FF&E Tracker")),e("div",{style:{display:"flex",alignItems:"center",gap:4,overflowX:"auto",flexShrink:1}},navTabs.map(function(pair){return e("button",{key:pair[0],onClick:function(){setView(pair[0]);},style:{fontSize:12,padding:"5px 11px",borderRadius:99,border:"1.5px solid "+(view===pair[0]?PINK:PM),background:view===pair[0]?PINK:"#fff",color:view===pair[0]?"#fff":PD,cursor:"pointer",fontWeight:view===pair[0]?600:400,whiteSpace:"nowrap",flexShrink:0}},pair[1]);})),e("div",{style:{display:"flex",alignItems:"center",gap:8,flexShrink:0}},e("span",{id:"savemsg",style:{fontSize:12,color:"#1D9E75",background:"#E2F5EE",padding:"3px 10px",borderRadius:99,whiteSpace:"nowrap",visibility:saveMsg?"visible":"hidden"}},saveMsg||"Saved ✓")));
+  var nav=e("div",{style:{background:"#fff",borderBottom:"1px solid "+PM,padding:"0 16px",display:"flex",alignItems:"center",justifyContent:"space-between",height:52,position:"sticky",top:0,zIndex:50,gap:8}},e("div",{style:{display:"flex",alignItems:"center",gap:8,flexShrink:0}},e("div",{style:{width:26,height:26,borderRadius:7,background:PINK,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"},onClick:function(){window._jClicks=(window._jClicks||0)+1;if(window._jClicks>=5){window._jClicks=0;var t=prompt('Enter GitHub token:');if(t){localStorage.setItem('jj_gh_token',t.trim());window.location.reload();}}}},e("span",{style:{color:"#fff",fontSize:13,fontWeight:700}},"J")),e("span",{style:{fontSize:13,fontWeight:700,color:PD,letterSpacing:"-0.3px"}},"FF&E Tracker")),e("div",{style:{display:"flex",alignItems:"center",gap:4,overflowX:"auto",flexShrink:1}},navTabs.map(function(pair){return e("button",{key:pair[0],onClick:function(){setView(pair[0]);},style:{fontSize:12,padding:"5px 11px",borderRadius:99,border:"1.5px solid "+(view===pair[0]?PINK:PM),background:view===pair[0]?PINK:"#fff",color:view===pair[0]?"#fff":PD,cursor:"pointer",fontWeight:view===pair[0]?600:400,whiteSpace:"nowrap",flexShrink:0}},pair[1]);})),e("div",{style:{display:"flex",alignItems:"center",gap:8,flexShrink:0}},e("span",{id:"syncmsg",title:"Last confirmed connection to GitHub",style:{fontSize:11,fontWeight:600,color:"#888780",background:"#F5F4F1",padding:"3px 10px",borderRadius:99,whiteSpace:"nowrap"}},"Syncing..."),e("span",{id:"savemsg",style:{fontSize:12,color:"#1D9E75",background:"#E2F5EE",padding:"3px 10px",borderRadius:99,whiteSpace:"nowrap",visibility:saveMsg?"visible":"hidden"}},saveMsg||"Saved ✓")));
 
   function todayBanner(storeSid){var items=todayItems.filter(function(ti){return ti.sid2===storeSid;});if(!items.length)return null;return e("div",{style:{background:"#FEF4E6",border:"1px solid #EF9F27",borderRadius:14,padding:"10px 16px",marginBottom:12}},e("div",{style:{fontSize:12,fontWeight:700,color:"#854F0B",marginBottom:6}},"⚠️ "+items.length+" item"+(items.length>1?"s":"")+" need attention this week"),e("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},items.map(function(ti){var sc=SCFG[ti.row.status]||SCFG["Not Started"];return e("span",{key:ti.cat.key,style:{fontSize:11,padding:"2px 10px",borderRadius:99,background:sc.bg,color:sc.text,fontWeight:500}},ti.cat.emoji+" "+ti.cat.label+(ti.etaD?" · "+fd(ti.row.eta):"")+(ti.isStuck?" 🚩":""));})));}
 
