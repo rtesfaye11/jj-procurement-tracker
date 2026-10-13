@@ -328,7 +328,22 @@ function App(){
 
   function updRow(sid,catKey,field,val){setRows(function(prev){var next=Object.assign({},prev);next[sid]=Object.assign({},prev[sid]);var oldRow=(prev[sid]&&prev[sid][catKey])||blankRow();next[sid][catKey]=Object.assign({},oldRow,{[field]:val});var nts=timestamps,nact=activity;if(field==="status"&&val!==oldRow.status){var tsKey=sid+":"+catKey;nts=Object.assign({},timestamps,{[tsKey]:{status:val,at:nowISO(),prev:oldRow.status}});setTimestamps(nts);var storeName=(stores.find(function(s){return sk(s)===sid;})||{}).name||sid;var catLabel=(CATS.find(function(c){return c.key===catKey;})||{}).label||catKey;var entry={id:Date.now(),sid:sid,catKey:catKey,storeName:storeName,catLabel:catLabel,from:oldRow.status,to:val,at:nowISO()};nact=[entry].concat(activity).slice(0,200);setActivity(nact);}save(stores,next,notes,forms,nts,stuck,nact);return next;});}
   function toggleStuck(sid,catKey){var key=sid+":"+catKey;var next=Object.assign({},stuck,{[key]:!stuck[key]});setStuck(next);save(stores,rows,notes,forms,timestamps,next,activity);}
-  function updStore(id,field,val){setStores(function(prev){var next=prev.map(function(s){return sk(s)===id?Object.assign({},s,{[field]:val}):s;});save(next,rows,notes,forms,timestamps,stuck,activity);return next;});}
+  function updStore(id,field,val){
+    if(field==="id"){
+      var target=stores.find(function(s){return sk(s)===id;});
+      if(!target)return;
+      var newKey=(val||"").trim()||target.name;
+      if(newKey!==id&&stores.some(function(s){return sk(s)===newKey;})){alert("Store ID "+newKey+" is already used by another store.");return;}
+      var nextS=stores.map(function(s){return sk(s)===id?Object.assign({},s,{id:val}):s;});
+      var mv=function(o){var c=Object.assign({},o);if(newKey!==id&&c[id]!==undefined){c[newKey]=c[id];delete c[id];}return c;};
+      var nr2=mv(rows),nn2=mv(notes),nf2=mv(forms);
+      setStores(nextS);setRows(nr2);setNotes(nn2);setForms(nf2);
+      if(activeStore===id)setActiveStore(newKey);
+      save(nextS,nr2,nn2,nf2,timestamps,stuck,activity);
+      return;
+    }
+    setStores(function(prev){var next=prev.map(function(s){return sk(s)===id?Object.assign({},s,{[field]:val}):s;});save(next,rows,notes,forms,timestamps,stuck,activity);return next;});
+  }
   function updNotes(sid,val){var next=Object.assign({},notes,{[sid]:val});setNotes(next);save(stores,rows,next,forms,timestamps,stuck,activity);}
   function updForm(sid,field,val){setForms(function(prev){var next=Object.assign({},prev);next[sid]=Object.assign({},prev[sid]||{},{[field]:val});save(stores,rows,notes,next,timestamps,stuck,activity);return next;});}
   function addStoreHandler(){
@@ -336,6 +351,7 @@ function App(){
     var key=newStore.name.trim().toLowerCase();
     var exists=stores.some(function(s){return s.name.trim().toLowerCase()===key;});
     if(exists){alert("A store with that exact name already exists in the tracker.");return;}
+    if(stores.some(function(s){return sk(s)===sk(newStore);})){alert("That Store ID is already used by another store.");return;}
     var ns2=stores.concat([Object.assign({},newStore)]);
     var nr=Object.assign({},rows);
     nr[sk(newStore)]={};
